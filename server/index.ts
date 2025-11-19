@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { handleProxyWebhook } from "./routes/proxy-webhook";
+import { handleProxySceneWebhook } from "./routes/proxy-scene-webhook";
 
 export function createServer() {
   const app = express();
@@ -21,6 +22,7 @@ export function createServer() {
   app.get("/api/demo", handleDemo);
   // Proxy endpoint to forward multipart uploads to an external webhook (avoids CORS issues)
   app.post("/api/proxy-webhook", handleProxyWebhook);
+  app.post("/api/proxy-scene-webhook", handleProxySceneWebhook);
 
   return app;
 }
