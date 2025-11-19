@@ -18,9 +18,9 @@ function download(filename: string, content: string, type: string) {
 export default function ResultsSection({ prompts }: ResultsSectionProps) {
   const handleDownloadText = () => {
     const text = prompts
-      .map((p, i) => `Variation ${i + 1}\n${p}`)
+      .map((p) => p)
       .join("\n\n---\n\n");
-    download("fashion-prompts.txt", text, "text/plain;charset=utf-8");
+    download("fashion-prompt.txt", text, "text/plain;charset=utf-8");
   };
 
   const handleDownloadJson = () => {
@@ -36,18 +36,18 @@ export default function ResultsSection({ prompts }: ResultsSectionProps) {
     <section className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-xl font-semibold text-foreground">
-          Your Fashion Photography Prompts
+          Your Fashion Photography Prompt
         </h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleDownloadText}>
             Download as Text
           </Button>
-          <Button onClick={handleDownloadJson}>Download All Prompts</Button>
+          <Button onClick={handleDownloadJson}>Download Prompt</Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {prompts.map((p, i) => (
-          <PromptCard key={i} title={`Variation ${i + 1}`} prompt={p} />
+          <PromptCard key={i} title="Generated Prompt" prompt={p} />
         ))}
       </div>
     </section>

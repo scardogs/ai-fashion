@@ -44,8 +44,7 @@ export default function Index() {
   const startProgressMessages = () => {
     const messages = [
       "Analyzing your image...",
-      "Generating professional prompts...",
-      "Creating variations...",
+      "Generating professional prompt...",
     ];
     let i = 0;
     setStatus(messages[0]);
@@ -68,14 +67,12 @@ export default function Index() {
       const out = await handleImageSubmission(compressed, {
         signal: controller.signal,
       });
-      if (out.length !== 4) {
-        while (out.length < 4) out.push(out[out.length - 1] || "");
-        if (out.length > 4) out.length = 4;
-      }
-      setPrompts(out);
+      // Only use the first prompt (1 variation)
+      const singlePrompt = out.length > 0 ? [out[0]] : [];
+      setPrompts(singlePrompt);
       // Persist to history with the original file (not compressed, for better thumbnail quality)
       try {
-        await addHistoryEntry({ file, prompts: out });
+        await addHistoryEntry({ file, prompts: singlePrompt });
       } catch {}
       toast.success("Prompts generated successfully");
     } catch (e: any) {
@@ -128,7 +125,7 @@ export default function Index() {
               </h2>
               <p className="text-sm text-foreground/70 mb-4">
                 Upload a JPG, PNG, or WEBP image up to 10MB. Then click Generate
-                to receive 4 detailed fashion photography prompts.
+                to receive a detailed fashion photography prompt.
               </p>
               <div className="flex items-center gap-3">
                 <Button
