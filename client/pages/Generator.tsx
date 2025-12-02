@@ -73,7 +73,7 @@ export default function Generator() {
       // Persist to history with the original file (not compressed, for better thumbnail quality)
       try {
         await addHistoryEntry({ file, prompts: singlePrompt });
-      } catch {}
+      } catch { }
       toast.success("Prompts generated successfully");
     } catch (e: any) {
       if (e?.name === "AbortError") {
@@ -100,7 +100,7 @@ export default function Generator() {
       <section className="mb-10">
         <div className="max-w-3xl space-y-3">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            AI Fashion Prompt Generator
+            AI Image Prompt Generator
           </h1>
           <p className="text-foreground/80 text-lg">
             Transform your fashion images into professional photography prompts
