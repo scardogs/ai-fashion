@@ -1,5 +1,5 @@
-import { Link, NavLink } from "react-router-dom";
-import { Camera, Menu } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { Camera, Menu, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,52 +10,34 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const navLink = ({ to, label }: { to: string; label: string }) => (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        cn(
-          "px-3 py-2 text-sm font-medium rounded-md transition-colors",
-          isActive
-            ? "text-primary bg-accent"
-            : "text-foreground/80 hover:text-foreground hover:bg-accent",
-        )
-      }
-    >
-      {label}
-    </NavLink>
-  );
-
-  const mobileNavLink = ({ to, label }: { to: string; label: string }) => (
-    <NavLink
-      to={to}
-      onClick={() => setMobileMenuOpen(false)}
-      className={({ isActive }) =>
-        cn(
-          "block px-4 py-3 text-base font-medium rounded-md transition-colors",
-          isActive
-            ? "text-primary bg-accent"
-            : "text-foreground/80 hover:text-foreground hover:bg-accent",
-        )
-      }
-    >
-      {label}
-    </NavLink>
-  );
+  const location = useLocation();
 
   const navItems = [
     { to: "/", label: "Home" },
-    { to: "/generate", label: "Image to Prompt" },
-    { to: "/scene-to-prompt", label: "Scene to Prompt" },
-    { to: "/broll-to-prompt", label: "B-Roll to Prompt" },
+    {
+      label: "Generators",
+      children: [
+        { to: "/generate", label: "Image to Prompt" },
+        { to: "/scene-to-prompt", label: "Scene to Prompt" },
+        { to: "/broll-to-prompt", label: "B-Roll to Prompt" },
+      ],
+    },
     { to: "/how-it-works", label: "How It Works" },
     { to: "/about", label: "About" },
-    { to: "/history", label: "History" },
   ];
+
+  const isGeneratorActive = navItems
+    .find((item) => item.label === "Generators")
+    ?.children?.some((child) => child.to === location.pathname);
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -73,9 +55,66 @@ export default function Header() {
             </span>
           </div>
         </Link>
+
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {navItems.map((item) => navLink(item))}
+          {navItems.map((item) => {
+            if (item.children) {
+              return (
+                <DropdownMenu key={item.label}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
+                        isGeneratorActive
+                          ? "text-primary bg-accent"
+                          : "text-foreground/80"
+                      )}
+                    >
+                      {item.label}
+                      <ChevronDown className="ml-1 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {item.children.map((child) => (
+                      <DropdownMenuItem key={child.to} asChild>
+                        <Link
+                          to={child.to}
+                          className={cn(
+                            "w-full cursor-pointer",
+                            location.pathname === child.to && "bg-accent text-accent-foreground"
+                          )}
+                        >
+                          {child.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to!}
+                className={({ isActive }) =>
+                  cn(
+                    "px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    isActive
+                      ? "text-primary bg-accent"
+                      : "text-foreground/80 hover:text-foreground hover:bg-accent"
+                  )
+                }
+              >
+                {item.label}
+              </NavLink>
+            );
+          })}
         </nav>
+
+        {/* Mobile Navigation */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button
@@ -92,7 +131,54 @@ export default function Header() {
               <SheetTitle>Navigation</SheetTitle>
             </SheetHeader>
             <nav className="flex flex-col gap-2 mt-6">
-              {navItems.map((item) => mobileNavLink(item))}
+              {navItems.map((item) => {
+                if (item.children) {
+                  return (
+                    <div key={item.label} className="flex flex-col gap-2">
+                      <div className="px-4 py-2 text-sm font-semibold text-foreground/70">
+                        {item.label}
+                      </div>
+                      <div className="pl-4 flex flex-col gap-1 border-l-2 border-muted ml-4">
+                        {item.children.map((child) => (
+                          <NavLink
+                            key={child.to}
+                            to={child.to}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={({ isActive }) =>
+                              cn(
+                                "block px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                isActive
+                                  ? "text-primary bg-accent"
+                                  : "text-foreground/80 hover:text-foreground hover:bg-accent"
+                              )
+                            }
+                          >
+                            {child.label}
+                          </NavLink>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to!}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      cn(
+                        "block px-4 py-3 text-base font-medium rounded-md transition-colors",
+                        isActive
+                          ? "text-primary bg-accent"
+                          : "text-foreground/80 hover:text-foreground hover:bg-accent"
+                      )
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                );
+              })}
             </nav>
           </SheetContent>
         </Sheet>
