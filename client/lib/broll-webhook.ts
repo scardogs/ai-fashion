@@ -1,5 +1,5 @@
 const DEFAULT_BROLL_WEBHOOK_URL =
-  "https://n8n.srv1151765.hstgr.cloud/webhook/brolltoprompts";
+  "https://n8n.srv931715.hstgr.cloud/webhook/brolltoprompts";
 export const BROLL_WEBHOOK_URL: string =
   ((import.meta as any)?.env?.VITE_BROLL_WEBHOOK_URL as string | undefined) ||
   DEFAULT_BROLL_WEBHOOK_URL;
@@ -11,7 +11,7 @@ type VariationItem = {
   model?: string;
   task_type?: string;
   variation?: number;
-  input?: { prompt?: string; [k: string]: unknown };
+  input?: { prompt?: string;[k: string]: unknown };
   [k: string]: unknown;
 };
 
