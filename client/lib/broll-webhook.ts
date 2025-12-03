@@ -33,14 +33,24 @@ async function normalizeToPrompts(data: unknown): Promise<string[]> {
   return [];
 }
 
-export async function handleBrollVideoSubmission(
-  videoFile: File,
-  opts?: { signal?: AbortSignal },
+export async function handleBrollImageSubmission(
+  imageFile: File,
+  opts?: {
+    signal?: AbortSignal;
+    ethnicity?: string;
+    skinColor?: string;
+    facialExpression?: string;
+    imperfection?: string;
+  },
 ): Promise<string[]> {
   // BROLL_WEBHOOK_URL is always set via env or default
 
   const formData = new FormData();
-  formData.append("data", videoFile); // Using same field name as webhook expects
+  formData.append("data", imageFile); // Using same field name as webhook expects
+  if (opts?.ethnicity) formData.append("ethnicity", opts.ethnicity);
+  if (opts?.skinColor) formData.append("skinColor", opts.skinColor);
+  if (opts?.facialExpression) formData.append("facialExpression", opts.facialExpression);
+  if (opts?.imperfection) formData.append("imperfection", opts.imperfection);
 
   // Try direct POST first (may fail due to CORS)
   try {

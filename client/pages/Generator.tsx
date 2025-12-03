@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import UploadZone from "@/components/UploadZone";
 import ImagePreview from "@/components/ImagePreview";
 import ResultsSection from "@/components/ResultsSection";
+import AdvancedSettings from "@/components/AdvancedSettings";
 import { compressImage } from "@/lib/image";
 import { handleImageSubmission } from "@/lib/webhook";
 import { addHistoryEntry } from "@/lib/history";
@@ -16,6 +17,13 @@ export default function Generator() {
   const [status, setStatus] = useState("Idle");
   const [prompts, setPrompts] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Advanced Settings State
+  const [ethnicity, setEthnicity] = useState("");
+  const [skinColor, setSkinColor] = useState("");
+  const [facialExpression, setFacialExpression] = useState("");
+  const [imperfection, setImperfection] = useState("");
+
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -66,6 +74,10 @@ export default function Generator() {
       const compressed = await compressImage(file);
       const out = await handleImageSubmission(compressed, {
         signal: controller.signal,
+        ethnicity,
+        skinColor,
+        facialExpression,
+        imperfection,
       });
       // Only use the first prompt (1 variation)
       const singlePrompt = out.length > 0 ? [out[0]] : [];
@@ -118,6 +130,17 @@ export default function Generator() {
         </div>
 
         <div className="space-y-6">
+          <AdvancedSettings
+            ethnicity={ethnicity}
+            setEthnicity={setEthnicity}
+            skinColor={skinColor}
+            setSkinColor={setSkinColor}
+            facialExpression={facialExpression}
+            setFacialExpression={setFacialExpression}
+            imperfection={imperfection}
+            setImperfection={setImperfection}
+          />
+
           {!prompts && (
             <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-foreground mb-2">

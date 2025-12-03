@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import VideoUploadZone from "@/components/VideoUploadZone";
-import VideoPreview from "@/components/VideoPreview";
+import UploadZone from "@/components/UploadZone";
+import ImagePreview from "@/components/ImagePreview";
 import ResultsSection from "@/components/ResultsSection";
-import { handleBrollVideoSubmission } from "@/lib/broll-webhook";
+import AdvancedSettings from "@/components/AdvancedSettings";
+import { handleBrollImageSubmission } from "@/lib/broll-webhook";
 import { addHistoryEntry } from "@/lib/history";
 import { toast } from "sonner";
 import { Loader2, X } from "lucide-react";
@@ -15,6 +16,13 @@ export default function BrollToPrompt() {
   const [status, setStatus] = useState("Idle");
   const [prompts, setPrompts] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Advanced Settings State
+  const [ethnicity, setEthnicity] = useState("");
+  const [skinColor, setSkinColor] = useState("");
+  const [facialExpression, setFacialExpression] = useState("");
+  const [imperfection, setImperfection] = useState("");
+
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -42,7 +50,7 @@ export default function BrollToPrompt() {
 
   const startProgressMessages = () => {
     const messages = [
-      "Analyzing your b-roll video...",
+      "Analyzing your b-roll image...",
       "Generating professional prompt...",
     ];
     let i = 0;
@@ -62,8 +70,12 @@ export default function BrollToPrompt() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const out = await handleBrollVideoSubmission(file, {
+      const out = await handleBrollImageSubmission(file, {
         signal: controller.signal,
+        ethnicity,
+        skinColor,
+        facialExpression,
+        imperfection,
       });
       // Only use the first prompt (1 variation)
       const singlePrompt = out.length > 0 ? [out[0]] : [];
@@ -71,7 +83,7 @@ export default function BrollToPrompt() {
       // Persist to history with the original file
       try {
         await addHistoryEntry({ file, prompts: singlePrompt });
-      } catch {}
+      } catch { }
       toast.success("Prompts generated successfully");
     } catch (e: any) {
       if (e?.name === "AbortError") {
@@ -79,7 +91,7 @@ export default function BrollToPrompt() {
       } else if (e?.message) {
         setError(e.message);
       } else {
-        setError("Analysis failed. Please try a different video.");
+        setError("Analysis failed. Please try a different image.");
       }
     } finally {
       stop();
@@ -101,7 +113,7 @@ export default function BrollToPrompt() {
             AI B-Roll to Prompt Generator
           </h1>
           <p className="text-foreground/80 text-lg">
-            Transform your b-roll videos into professional photography prompts
+            Transform your b-roll images into professional photography prompts
           </p>
         </div>
       </section>
@@ -109,20 +121,31 @@ export default function BrollToPrompt() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <div className="space-y-4">
           {!file ? (
-            <VideoUploadZone onFileSelected={onFileSelected} />
+            <UploadZone onFileSelected={onFileSelected} />
           ) : (
-            <VideoPreview src={previewUrl!} onChangeVideo={resetAll} />
+            <ImagePreview src={previewUrl!} onChangeImage={resetAll} />
           )}
         </div>
 
         <div className="space-y-6">
+          <AdvancedSettings
+            ethnicity={ethnicity}
+            setEthnicity={setEthnicity}
+            skinColor={skinColor}
+            setSkinColor={setSkinColor}
+            facialExpression={facialExpression}
+            setFacialExpression={setFacialExpression}
+            imperfection={imperfection}
+            setImperfection={setImperfection}
+          />
+
           {!prompts && (
             <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-foreground mb-2">
                 Get Started
               </h2>
               <p className="text-sm text-foreground/70 mb-4">
-                Upload a MP4, MOV, WebM, or AVI video up to 100MB. Then click Generate
+                Upload a JPG, PNG, or WEBP image up to 10MB. Then click Generate
                 to receive a detailed b-roll photography prompt.
               </p>
               <div className="flex items-center gap-3">
@@ -146,7 +169,7 @@ export default function BrollToPrompt() {
                 )}
                 {file && !isLoading && (
                   <Button variant="ghost" onClick={resetAll}>
-                    Try Another Video
+                    Try Another Image
                   </Button>
                 )}
               </div>

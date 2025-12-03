@@ -11,7 +11,7 @@ type VariationItem = {
   model?: string;
   task_type?: string;
   variation?: number;
-  input?: { prompt?: string; [k: string]: unknown };
+  input?: { prompt?: string;[k: string]: unknown };
   [k: string]: unknown;
 };
 
@@ -35,12 +35,22 @@ async function normalizeToPrompts(data: unknown): Promise<string[]> {
 
 export async function handleImageSubmission(
   imageFile: File,
-  opts?: { signal?: AbortSignal },
+  opts?: {
+    signal?: AbortSignal;
+    ethnicity?: string;
+    skinColor?: string;
+    facialExpression?: string;
+    imperfection?: string;
+  },
 ): Promise<string[]> {
   // WEBHOOK_URL is always set via env or default
 
   const formData = new FormData();
   formData.append("Base_Image", imageFile);
+  if (opts?.ethnicity) formData.append("ethnicity", opts.ethnicity);
+  if (opts?.skinColor) formData.append("skinColor", opts.skinColor);
+  if (opts?.facialExpression) formData.append("facialExpression", opts.facialExpression);
+  if (opts?.imperfection) formData.append("imperfection", opts.imperfection);
 
   // Try direct POST first (may fail due to CORS)
   try {

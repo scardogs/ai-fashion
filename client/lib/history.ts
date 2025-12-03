@@ -72,7 +72,7 @@ async function createThumbnailDataUrl(
   if (!ctx) return dataUrl;
   ctx.drawImage(img, 0, 0, width, height);
   const type = "image/webp";
-  return new Promise((resolve) =>
+  return new Promise<string>((resolve) =>
     canvas.toBlob(
       (b) => resolve(b ? URL.createObjectURL(b) : dataUrl),
       type,
