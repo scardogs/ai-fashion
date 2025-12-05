@@ -435,16 +435,10 @@ export default function AdvancedSettings({
                                             <SelectValue placeholder="Select Angle" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="close-up">Close Up</SelectItem>
-                                            <SelectItem value="medium-shot">Medium Shot</SelectItem>
-                                            <SelectItem value="wide-shot">Wide Shot</SelectItem>
-                                            <SelectItem value="extreme-close-up">Extreme Close Up</SelectItem>
-                                            <SelectItem value="full-body">Full Body</SelectItem>
-                                            <SelectItem value="three-quarter">Three Quarter</SelectItem>
-                                            <SelectItem value="profile">Profile</SelectItem>
-                                            <SelectItem value="overhead">Overhead</SelectItem>
-                                            <SelectItem value="low-angle">Low Angle</SelectItem>
-                                            <SelectItem value="high-angle">High Angle</SelectItem>
+                                            <SelectItem value="close-up">Close-Up</SelectItem>
+                                            <SelectItem value="medium-close-up">Medium Close-Up</SelectItem>
+                                            <SelectItem value="wide-close-up">Wide Close-Up</SelectItem>
+                                            <SelectItem value="full-body">Full-Body</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

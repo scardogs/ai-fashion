@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Generator from "./pages/Generator";
 import SceneToPrompt from "./pages/SceneToPrompt";
 import BrollToPrompt from "./pages/BrollToPrompt";
+import FakeAvatarGenerator from "./pages/FakeAvatarGenerator";
 import NotFound from "./pages/NotFound";
 import HowItWorks from "./pages/HowItWorks";
 import About from "./pages/About";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/generate" element={<Generator />} />
               <Route path="/scene-to-prompt" element={<SceneToPrompt />} />
               <Route path="/broll-to-prompt" element={<BrollToPrompt />} />
+              <Route path="/fake-avatar-generator" element={<FakeAvatarGenerator />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/about" element={<About />} />
               <Route path="/privacy" element={<Privacy />} />
