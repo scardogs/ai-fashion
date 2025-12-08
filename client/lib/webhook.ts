@@ -1,5 +1,5 @@
 const DEFAULT_WEBHOOK_URL =
-  "https://n8n.srv931715.hstgr.cloud/webhook/baseimagetoprompt";
+  "https://n8n.srv1151765.hstgr.cloud/webhook/baseimagetoprompt";
 export const WEBHOOK_URL: string =
   ((import.meta as any)?.env?.VITE_WEBHOOK_URL as string | undefined) ||
   DEFAULT_WEBHOOK_URL;
@@ -52,6 +52,7 @@ export async function handleImageSubmission(
     ears?: string;
     transformHead?: boolean;
     angle?: string;
+    pose?: string;
   },
 ): Promise<string[]> {
   // WEBHOOK_URL is always set via env or default
@@ -73,6 +74,7 @@ export async function handleImageSubmission(
   if (opts?.ears) formData.append("ears", opts.ears);
   if (opts?.transformHead) formData.append("transformHead", String(opts.transformHead));
   if (opts?.angle) formData.append("angle", opts.angle);
+  if (opts?.pose) formData.append("pose", opts.pose);
 
   // Try direct POST first (may fail due to CORS)
   try {

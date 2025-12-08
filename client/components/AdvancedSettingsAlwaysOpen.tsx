@@ -56,6 +56,9 @@ export interface AdvancedSettingsAlwaysOpenProps {
     // Background Environment
     backgroundEnvironment: string;
     setBackgroundEnvironment: (value: string) => void;
+    // Pose (Optional)
+    pose?: string;
+    setPose?: (value: string) => void;
 }
 
 export default function AdvancedSettingsAlwaysOpen({
@@ -91,6 +94,8 @@ export default function AdvancedSettingsAlwaysOpen({
     setAngle,
     backgroundEnvironment,
     setBackgroundEnvironment,
+    pose,
+    setPose,
 }: AdvancedSettingsAlwaysOpenProps) {
     const [selectedEthnicities, setSelectedEthnicities] = useState<string[]>([]);
 
@@ -385,6 +390,18 @@ export default function AdvancedSettingsAlwaysOpen({
                                 onChange={(e) => setBodyComposition(e.target.value)}
                             />
                         </div>
+
+                        {pose !== undefined && setPose && (
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="pose">Pose</Label>
+                                <Input
+                                    id="pose"
+                                    placeholder="e.g. standing, sitting, walking, hands on hips"
+                                    value={pose}
+                                    onChange={(e) => setPose(e.target.value)}
+                                />
+                            </div>
+                        )}
 
                         <div className="space-y-2 sm:col-span-2">
                             <Label htmlFor="imperfection">Imperfection</Label>

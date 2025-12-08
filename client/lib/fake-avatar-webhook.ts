@@ -52,6 +52,7 @@ export async function handleFakeAvatarSubmission(
         transformHead?: boolean;
         angle?: string;
         backgroundEnvironment?: string;
+        pose?: string;
     },
 ): Promise<string[]> {
     const formData = new FormData();
@@ -73,6 +74,7 @@ export async function handleFakeAvatarSubmission(
     if (opts?.transformHead) formData.append("transformHead", String(opts.transformHead));
     if (opts?.angle) formData.append("angle", opts.angle);
     if (opts?.backgroundEnvironment) formData.append("backgroundEnvironment", opts.backgroundEnvironment);
+    if (opts?.pose) formData.append("pose", opts.pose);
 
     // Try direct POST first (may fail due to CORS)
     try {

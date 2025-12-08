@@ -142,6 +142,9 @@ export interface AdvancedSettingsProps {
     setTransformHead: (value: boolean) => void;
     angle: string;
     setAngle: (value: string) => void;
+    // Pose (Optional - only for main Generator)
+    pose?: string;
+    setPose?: (value: string) => void;
 }
 
 export default function AdvancedSettings({
@@ -175,6 +178,8 @@ export default function AdvancedSettings({
     setTransformHead,
     angle,
     setAngle,
+    pose,
+    setPose,
 }: AdvancedSettingsProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedEthnicities, setSelectedEthnicities] = useState<string[]>([]);
@@ -453,6 +458,18 @@ export default function AdvancedSettings({
                                     onChange={(e) => setBodyComposition(e.target.value)}
                                 />
                             </div>
+
+                            {pose !== undefined && setPose && (
+                                <div className="space-y-2 sm:col-span-2">
+                                    <Label htmlFor="pose">Pose</Label>
+                                    <Input
+                                        id="pose"
+                                        placeholder="e.g. standing, sitting, walking, hands on hips"
+                                        value={pose}
+                                        onChange={(e) => setPose(e.target.value)}
+                                    />
+                                </div>
+                            )}
 
                             <div className="space-y-2 sm:col-span-2">
                                 <Label htmlFor="imperfection">Imperfection</Label>

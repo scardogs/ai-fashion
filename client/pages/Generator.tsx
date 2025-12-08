@@ -36,6 +36,8 @@ export default function Generator() {
   // Transform Head
   const [transformHead, setTransformHead] = useState(false);
   const [angle, setAngle] = useState("");
+  // Pose
+  const [pose, setPose] = useState("");
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -102,6 +104,7 @@ export default function Generator() {
         ears,
         transformHead,
         angle,
+        pose,
       });
       // Only use the first prompt (1 variation)
       const singlePrompt = out.length > 0 ? [out[0]] : [];
@@ -136,7 +139,7 @@ export default function Generator() {
       <section className="mb-10">
         <div className="max-w-3xl space-y-3">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            AI Image Prompt Generator
+            AI Fashion Image Prompt Generator
           </h1>
           <p className="text-foreground/80 text-lg">
             Transform your fashion images into professional photography prompts
@@ -185,6 +188,8 @@ export default function Generator() {
             setTransformHead={setTransformHead}
             angle={angle}
             setAngle={setAngle}
+            pose={pose}
+            setPose={setPose}
           />
 
           {!prompts && (
