@@ -58,6 +58,25 @@ export default function FakeAvatarGenerator() {
     };
 
     const handleGenerate = async () => {
+        // Validation
+        const requiredFields = [
+            { value: ethnicity, label: "Ethnicity" },
+            { value: gender, label: "Gender" },
+            { value: skinColor, label: "Skin Color" },
+            { value: hairColor, label: "Hair Color" },
+            { value: facialExpression, label: "Facial Expression" },
+            { value: bodyComposition, label: "Body Composition" },
+            { value: imperfection, label: "Imperfection" },
+            { value: backgroundEnvironment, label: "Background Environment" },
+        ];
+
+        const missingFields = requiredFields.filter((f) => !f.value).map((f) => f.label);
+
+        if (missingFields.length > 0) {
+            setError(`Please fill in all required fields: ${missingFields.join(", ")}`);
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
         setPrompts(null);

@@ -151,7 +151,7 @@ export default function AdvancedSettingsAlwaysOpen({
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2 sm:col-span-2">
-                            <Label>Ethnicity (Select up to 2)</Label>
+                            <Label>Ethnicity (Select up to 2) <span className="text-destructive">*</span></Label>
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-60 overflow-y-auto border rounded-md p-3">
                                 {ETHNICITIES.map((eth) => (
                                     <div key={eth} className="flex items-center space-x-2">
@@ -177,7 +177,7 @@ export default function AdvancedSettingsAlwaysOpen({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="gender">Gender</Label>
+                            <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
                             <Select value={gender} onValueChange={setGender}>
                                 <SelectTrigger id="gender">
                                     <SelectValue placeholder="Select Gender" />
@@ -190,7 +190,7 @@ export default function AdvancedSettingsAlwaysOpen({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="skinColor">Skin Color</Label>
+                            <Label htmlFor="skinColor">Skin Color <span className="text-destructive">*</span></Label>
                             <Select value={skinColor} onValueChange={setSkinColor}>
                                 <SelectTrigger id="skinColor">
                                     <SelectValue placeholder="Select Skin Color" />
@@ -207,7 +207,7 @@ export default function AdvancedSettingsAlwaysOpen({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="hairColor">Hair Color</Label>
+                            <Label htmlFor="hairColor">Hair Color <span className="text-destructive">*</span></Label>
                             <Select value={hairColor} onValueChange={setHairColor}>
                                 <SelectTrigger id="hairColor">
                                     <SelectValue placeholder="Select Hair Color" />
@@ -231,7 +231,7 @@ export default function AdvancedSettingsAlwaysOpen({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="facialExpression">Facial Expression</Label>
+                            <Label htmlFor="facialExpression">Facial Expression <span className="text-destructive">*</span></Label>
                             <Select value={facialExpression} onValueChange={setFacialExpression}>
                                 <SelectTrigger id="facialExpression">
                                     <SelectValue placeholder="Select Expression" />
@@ -249,7 +249,7 @@ export default function AdvancedSettingsAlwaysOpen({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="backgroundEnvironment">Background/Environment Theme</Label>
+                            <Label htmlFor="backgroundEnvironment">Background/Environment Theme <span className="text-destructive">*</span></Label>
                             <Select value={backgroundEnvironment} onValueChange={setBackgroundEnvironment}>
                                 <SelectTrigger id="backgroundEnvironment">
                                     <SelectValue placeholder="Select Background" />
@@ -382,7 +382,7 @@ export default function AdvancedSettingsAlwaysOpen({
                         )}
 
                         <div className="space-y-2 sm:col-span-2">
-                            <Label htmlFor="bodyComposition">Body Composition</Label>
+                            <Label htmlFor="bodyComposition">Body Composition <span className="text-destructive">*</span></Label>
                             <Input
                                 id="bodyComposition"
                                 placeholder="e.g. athletic, slim, curvy, muscular"
@@ -404,7 +404,7 @@ export default function AdvancedSettingsAlwaysOpen({
                         )}
 
                         <div className="space-y-2 sm:col-span-2">
-                            <Label htmlFor="imperfection">Imperfection</Label>
+                            <Label htmlFor="imperfection">Imperfection <span className="text-destructive">*</span></Label>
                             <Input
                                 id="imperfection"
                                 placeholder="e.g. freckles, scar, mole"
