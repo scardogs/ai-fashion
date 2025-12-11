@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 
 interface ResultsSectionProps {
   prompts: string[] | null;
-  labels?: string[]; // Optional custom labels for each prompt
+  labels?: string[];
+  combinedPromptFooter?: string; // Optional text to append to the combined prompt
 }
 
 function download(filename: string, content: string, type: string) {
@@ -16,7 +17,7 @@ function download(filename: string, content: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function ResultsSection({ prompts, labels }: ResultsSectionProps) {
+export default function ResultsSection({ prompts, labels, combinedPromptFooter }: ResultsSectionProps) {
   const hasPrompts = prompts && prompts.length > 0;
 
   const handleDownloadText = () => {
@@ -42,6 +43,10 @@ export default function ResultsSection({ prompts, labels }: ResultsSectionProps)
     return prompts!.length > 1 ? `Variation ${i + 1}` : "Generated Prompt";
   };
 
+  const combinedPromptContent = prompts
+    ? prompts.join("\n\n") + (combinedPromptFooter ? `\n\n${combinedPromptFooter}` : "")
+    : "";
+
   return (
     <section className="space-y-4">
       {hasPrompts && (
@@ -66,7 +71,7 @@ export default function ResultsSection({ prompts, labels }: ResultsSectionProps)
               <PromptCard
                 key="combined"
                 title="Combined Prompt"
-                prompt={prompts.join("\n\n")}
+                prompt={combinedPromptContent}
               />
             )}
           </div>

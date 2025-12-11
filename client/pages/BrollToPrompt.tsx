@@ -118,6 +118,9 @@ export default function BrollToPrompt() {
       // Combine all prompts (if required) or show them separately.
       // User requested dynamic behavior: if 2 items, show separate prompts.
       // So we just pass the array 'out' directly, and ResultsSection will iterate them.
+      if (out.length === 2) {
+        out.reverse();
+      }
       setPrompts(out);
       // Persist to history with the original file
       try {
@@ -282,7 +285,17 @@ export default function BrollToPrompt() {
             </div>
           )}
 
-          {prompts && <ResultsSection prompts={prompts} labels={prompts.length === 2 ? ["Scene Description", "Face Analysis Prompt"] : undefined} />}
+          {prompts && (
+            <ResultsSection
+              prompts={prompts}
+              labels={
+                prompts.length === 2
+                  ? ["Face Analysis Prompt", "Scene Description"]
+                  : undefined
+              }
+              combinedPromptFooter="using the exact facial structure, eyes, eyebrows, nose, mouth, ears, hair, skin tone, and details of the person in the reference image, without alteration or beautification."
+            />
+          )}
         </div>
       </div>
     </div>
