@@ -76,6 +76,30 @@ export async function handleImageSubmission(
   if (opts?.angle) formData.append("angle", opts.angle);
   if (opts?.pose) formData.append("pose", opts.pose);
 
+  // Check if any advanced settings are populated
+  const hasAdvancedSettings = [
+    opts?.ethnicity,
+    opts?.gender,
+    opts?.skinColor,
+    opts?.hairColor,
+    opts?.facialExpression,
+    opts?.bodyComposition,
+    opts?.imperfection,
+    opts?.exactFacialStructure ? "true" : "",
+    opts?.eyes,
+    opts?.eyebrows,
+    opts?.nose,
+    opts?.mouth,
+    opts?.ears,
+    opts?.transformHead ? "true" : "",
+    opts?.angle,
+    opts?.pose,
+  ].some(val => val && val.trim() !== "");
+
+  if (hasAdvancedSettings) {
+    formData.append("isnotempty", "true");
+  }
+
   // Try direct POST first (may fail due to CORS)
   try {
     const res = await fetch(WEBHOOK_URL, {

@@ -29,7 +29,7 @@ export default function Header() {
         { to: "/generate", label: "Fashion to Prompt" },
         { to: "/scene-to-prompt", label: "Scene to Prompt" },
         { to: "/scene-text-to-prompt", label: "Scene Text to Prompt" },
-        { to: "/broll-to-prompt", label: "B-Roll to Prompt" },
+        { to: "/broll-to-prompt", label: "B-Roll Scene to Prompt" },
         { to: "/fake-avatar-generator", label: "Fake Avatar Generator" },
       ],
     },

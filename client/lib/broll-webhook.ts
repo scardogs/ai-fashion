@@ -1,5 +1,5 @@
 const DEFAULT_BROLL_WEBHOOK_URL =
-  "https://n8n.srv1151765.hstgr.cloud/webhook/broll-scene-image";
+  "https://n8n.srv1151765.hstgr.cloud/webhook/broll-scene-images";
 export const BROLL_WEBHOOK_URL: string =
   ((import.meta as any)?.env?.VITE_BROLL_WEBHOOK_URL as string | undefined) ||
   DEFAULT_BROLL_WEBHOOK_URL;
@@ -110,6 +110,30 @@ export async function handleBrollImageSubmission(
   if (opts?.transformHead) formData.append("transformHead", String(opts.transformHead));
   if (opts?.angle) formData.append("angle", opts.angle);
   if (opts?.pose) formData.append("pose", opts.pose);
+
+  // Check if any advanced settings are populated
+  const hasAdvancedSettings = [
+    opts?.ethnicity,
+    opts?.gender,
+    opts?.skinColor,
+    opts?.hairColor,
+    opts?.facialExpression,
+    opts?.bodyComposition,
+    opts?.imperfection,
+    opts?.exactFacialStructure ? "true" : "",
+    opts?.eyes,
+    opts?.eyebrows,
+    opts?.nose,
+    opts?.mouth,
+    opts?.ears,
+    opts?.transformHead ? "true" : "",
+    opts?.angle,
+    opts?.pose,
+  ].some(val => val && val.trim() !== "");
+
+  if (hasAdvancedSettings) {
+    formData.append("isnotempty", "true");
+  }
 
   // Try direct POST first (may fail due to CORS)
   try {

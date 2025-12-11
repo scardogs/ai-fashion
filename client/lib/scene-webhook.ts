@@ -74,6 +74,29 @@ export async function handleSceneImageSubmission(
   if (opts?.transformHead) formData.append("transformHead", String(opts.transformHead));
   if (opts?.angle) formData.append("angle", opts.angle);
 
+  // Check if any advanced settings are populated
+  const hasAdvancedSettings = [
+    opts?.ethnicity,
+    opts?.gender,
+    opts?.skinColor,
+    opts?.hairColor,
+    opts?.facialExpression,
+    opts?.bodyComposition,
+    opts?.imperfection,
+    opts?.exactFacialStructure ? "true" : "",
+    opts?.eyes,
+    opts?.eyebrows,
+    opts?.nose,
+    opts?.mouth,
+    opts?.ears,
+    opts?.transformHead ? "true" : "",
+    opts?.angle,
+  ].some(val => val && val.trim() !== "");
+
+  if (hasAdvancedSettings) {
+    formData.append("isnotempty", "true");
+  }
+
   // Try direct POST first (may fail due to CORS)
   try {
     const res = await fetch(SCENE_WEBHOOK_URL, {
