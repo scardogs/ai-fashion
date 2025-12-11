@@ -9,6 +9,8 @@ import { addHistoryEntry } from "@/lib/history";
 import { toast } from "sonner";
 import { Loader2, X } from "lucide-react";
 
+import { handleKlingPromptSubmission } from "@/lib/kling-webhook";
+
 export default function BrollToPrompt() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -18,6 +20,11 @@ export default function BrollToPrompt() {
   const [status, setStatus] = useState("Idle");
   const [prompts, setPrompts] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Kling State
+  const [klingPrompt, setKlingPrompt] = useState<string | null>(null);
+  const [isGeneratingKling, setIsGeneratingKling] = useState(false);
+
 
   // Advanced Settings State
   const [ethnicity, setEthnicity] = useState("");
@@ -50,6 +57,7 @@ export default function BrollToPrompt() {
   const onFileSelected = (f: File) => {
     setFile(f);
     setPrompts(null);
+    setKlingPrompt(null);
     setError(null);
     const url = URL.createObjectURL(f);
     setPreviewUrl(url);
@@ -71,6 +79,7 @@ export default function BrollToPrompt() {
     if (refPreviewUrl) URL.revokeObjectURL(refPreviewUrl);
     setRefPreviewUrl(null);
     setPrompts(null);
+    setKlingPrompt(null);
     setError(null);
     setStatus("Idle");
   };
@@ -145,6 +154,21 @@ export default function BrollToPrompt() {
 
   const handleCancel = () => {
     abortRef.current?.abort();
+  };
+
+  const handleGenerateKling = async (combinedPrompt: string) => {
+    setIsGeneratingKling(true);
+    setKlingPrompt(null);
+    try {
+      const result = await handleKlingPromptSubmission(combinedPrompt);
+      setKlingPrompt(result);
+      toast.success("Kling prompt generated successfully");
+    } catch (e: any) {
+      toast.error("Failed to generate Kling prompt");
+      console.error(e);
+    } finally {
+      setIsGeneratingKling(false);
+    }
   };
 
   return (
@@ -294,6 +318,9 @@ export default function BrollToPrompt() {
                   : undefined
               }
               combinedPromptFooter="using the exact facial structure, eyes, eyebrows, nose, mouth, ears, hair, skin tone, and details of the person in the reference image, without alteration or beautification."
+              klingPrompt={klingPrompt}
+              isGeneratingKling={isGeneratingKling}
+              onGenerateKling={handleGenerateKling}
             />
           )}
         </div>

@@ -1,10 +1,15 @@
 import PromptCard from "./PromptCard";
 import { Button } from "@/components/ui/button";
+import { Loader2, Sparkles } from "lucide-react";
 
 interface ResultsSectionProps {
   prompts: string[] | null;
   labels?: string[];
-  combinedPromptFooter?: string; // Optional text to append to the combined prompt
+  combinedPromptFooter?: string;
+  // Kling Generator Props
+  klingPrompt?: string | null;
+  isGeneratingKling?: boolean;
+  onGenerateKling?: (prompt: string) => void;
 }
 
 function download(filename: string, content: string, type: string) {
@@ -17,7 +22,14 @@ function download(filename: string, content: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function ResultsSection({ prompts, labels, combinedPromptFooter }: ResultsSectionProps) {
+export default function ResultsSection({
+  prompts,
+  labels,
+  combinedPromptFooter,
+  klingPrompt,
+  isGeneratingKling,
+  onGenerateKling
+}: ResultsSectionProps) {
   const hasPrompts = prompts && prompts.length > 0;
 
   const handleDownloadText = () => {
@@ -68,11 +80,47 @@ export default function ResultsSection({ prompts, labels, combinedPromptFooter }
             ))}
 
             {prompts.length > 1 && (
-              <PromptCard
-                key="combined"
-                title="Combined Prompt"
-                prompt={combinedPromptContent}
-              />
+              <>
+                <PromptCard
+                  key="combined"
+                  title="Combined Prompt"
+                  prompt={combinedPromptContent}
+                />
+
+                {onGenerateKling && (
+                  <div className="pt-4 border-t border-dashed border-border mt-4">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-purple-500" />
+                          Kling AI Prompt Generator
+                        </h3>
+                        <Button
+                          onClick={() => onGenerateKling(combinedPromptContent)}
+                          disabled={isGeneratingKling}
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          {isGeneratingKling ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...
+                            </>
+                          ) : (
+                            "Generate Kling Prompt"
+                          )}
+                        </Button>
+                      </div>
+
+                      {klingPrompt && (
+                        <PromptCard
+                          key="kling"
+                          title="Generated Kling Prompt"
+                          prompt={klingPrompt}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </>
