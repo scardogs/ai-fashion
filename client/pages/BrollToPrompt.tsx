@@ -9,7 +9,7 @@ import { addHistoryEntry } from "@/lib/history";
 import { toast } from "sonner";
 import { Loader2, X } from "lucide-react";
 
-import { handleKlingPromptSubmission } from "@/lib/kling-webhook";
+import { handleKlingPromptSubmission, handleKlingVideoSubmission } from "@/lib/kling-webhook";
 
 export default function BrollToPrompt() {
   const [file, setFile] = useState<File | null>(null);
@@ -24,6 +24,7 @@ export default function BrollToPrompt() {
   // Kling State
   const [klingPrompt, setKlingPrompt] = useState<string | null>(null);
   const [isGeneratingKling, setIsGeneratingKling] = useState(false);
+  const [isGeneratingKlingVideo, setIsGeneratingKlingVideo] = useState(false);
 
 
   // Advanced Settings State
@@ -168,6 +169,34 @@ export default function BrollToPrompt() {
       console.error(e);
     } finally {
       setIsGeneratingKling(false);
+    }
+  };
+
+  const handleGenerateKlingVideo = async (params: {
+    prompt: string;
+    negativePrompt: string;
+    cfgScale: string;
+    mode: string;
+    duration: string;
+    version: string;
+    aspectRatio: string;
+    startFrame: File;
+    endFrame: File | null;
+  }) => {
+    setIsGeneratingKlingVideo(true);
+    try {
+      const result = await handleKlingVideoSubmission({
+        ...params,
+        endFrame: params.endFrame || undefined
+      });
+
+      console.log("Kling Video Response:", result);
+      toast.success("Kling video request sent successfully!");
+    } catch (e: any) {
+      toast.error("Failed to send Kling video request");
+      console.error(e);
+    } finally {
+      setIsGeneratingKlingVideo(false);
     }
   };
 
@@ -321,6 +350,10 @@ export default function BrollToPrompt() {
               klingPrompt={klingPrompt}
               isGeneratingKling={isGeneratingKling}
               onGenerateKling={handleGenerateKling}
+              startFrameImage={file}
+              endFrameImage={refFile}
+              isGeneratingKlingVideo={isGeneratingKlingVideo}
+              onGenerateKlingVideo={handleGenerateKlingVideo}
             />
           )}
         </div>

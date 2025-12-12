@@ -29,12 +29,16 @@ async function normalizeToPrompts(data: unknown): Promise<string[]> {
 
 export async function handleSceneTextSubmission(
     textContent: string,
+    negativePrompt?: string,
     opts?: {
         signal?: AbortSignal;
     },
 ): Promise<string[]> {
     const formData = new FormData();
     formData.append("text", textContent);
+    if (negativePrompt) {
+        formData.append("negative_prompt", negativePrompt);
+    }
 
     try {
         const res = await fetch(SCENE_TEXT_WEBHOOK_URL, {

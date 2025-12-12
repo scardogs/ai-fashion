@@ -7,6 +7,7 @@ import { Loader2, X } from "lucide-react";
 
 export default function SceneTextToPrompt() {
     const [sceneText, setSceneText] = useState("");
+    const [negativePrompt, setNegativePrompt] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState("Idle");
     const [prompts, setPrompts] = useState<string[] | null>(null);
@@ -37,7 +38,7 @@ export default function SceneTextToPrompt() {
         const controller = new AbortController();
         abortRef.current = controller;
         try {
-            const out = await handleSceneTextSubmission(sceneText, {
+            const out = await handleSceneTextSubmission(sceneText, negativePrompt, {
                 signal: controller.signal,
             });
             // Only use the first prompt (1 variation)
@@ -91,6 +92,19 @@ export default function SceneTextToPrompt() {
                             disabled={isLoading}
                         />
                     </div>
+
+                    <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+                        <h2 className="text-lg font-semibold text-foreground mb-4">
+                            Negative Prompt <span className="text-sm font-normal text-muted-foreground">(Optional)</span>
+                        </h2>
+                        <textarea
+                            className="w-full min-h-[100px] p-4 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                            placeholder="E.g. blur, low quality, distortion, ugly, pixelated..."
+                            value={negativePrompt}
+                            onChange={(e) => setNegativePrompt(e.target.value)}
+                            disabled={isLoading}
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-6">
@@ -123,7 +137,10 @@ export default function SceneTextToPrompt() {
                                     </Button>
                                 )}
                                 {sceneText && !isLoading && (
-                                    <Button variant="ghost" onClick={() => setSceneText("")}>
+                                    <Button variant="ghost" onClick={() => {
+                                        setSceneText("");
+                                        setNegativePrompt("");
+                                    }}>
                                         Clear Text
                                     </Button>
                                 )}
@@ -143,7 +160,9 @@ export default function SceneTextToPrompt() {
                                 <Button variant="outline" onClick={() => {
                                     setPrompts(null);
                                     setStatus("Idle");
+
                                     setSceneText("");
+                                    setNegativePrompt("");
                                 }}>
                                     Start New Scene
                                 </Button>

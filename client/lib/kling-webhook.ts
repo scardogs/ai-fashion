@@ -85,3 +85,57 @@ export async function handleKlingPromptSubmission(
 
     throw new Error("Direct connection to Kling webhook failed. Please check CORS settings or server status.");
 }
+
+const KLING_VIDEO_WEBHOOK_URL = "https://n8n.srv1151765.hstgr.cloud/webhook/kling-video-generator";
+
+
+
+
+
+export async function handleKlingVideoSubmission(
+    params: {
+        prompt: string;
+        negativePrompt: string;
+        cfgScale: string;
+        mode: string;
+        duration: string;
+        version: string;
+        aspectRatio: string;
+        startFrame: File;
+        endFrame?: File;
+    },
+    opts?: { signal?: AbortSignal }
+): Promise<any> {
+    const endFrameToUse = params.endFrame || params.startFrame;
+
+    const formData = new FormData();
+    formData.append("model", "kling");
+    formData.append("task_type", "video_generation");
+    formData.append("prompt", params.prompt);
+    formData.append("negative_prompt", params.negativePrompt);
+    formData.append("cfg_scale", params.cfgScale);
+    formData.append("mode", params.mode);
+    formData.append("duration", params.duration);
+    formData.append("version", params.version);
+    formData.append("aspect_ratio", params.aspectRatio);
+    formData.append("start_frame_image", params.startFrame);
+    formData.append("end_frame_image", endFrameToUse);
+
+
+    const res = await fetch(KLING_VIDEO_WEBHOOK_URL, {
+        method: "POST",
+        body: formData,
+        signal: opts?.signal,
+    });
+
+    if (!res.ok) {
+        throw new Error(`Kling Video request failed with status ${res.status}`);
+    }
+
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+        return await res.json();
+    } else {
+        return await res.text();
+    }
+}

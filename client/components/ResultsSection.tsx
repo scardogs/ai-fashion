@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
 import PromptCard from "./PromptCard";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Video } from "lucide-react";
+import UploadZone from "@/components/UploadZone";
+import ImagePreview from "@/components/ImagePreview";
 
 interface ResultsSectionProps {
   prompts: string[] | null;
@@ -10,6 +13,23 @@ interface ResultsSectionProps {
   klingPrompt?: string | null;
   isGeneratingKling?: boolean;
   onGenerateKling?: (prompt: string) => void;
+  // Kling Video Generator Props
+  startFrameImage?: File | null;
+  endFrameImage?: File | null;
+  isGeneratingKlingVideo?: boolean;
+  onGenerateKlingVideo?: (
+    params: {
+      prompt: string;
+      negativePrompt: string;
+      cfgScale: string;
+      mode: string;
+      duration: string;
+      version: string;
+      aspectRatio: string;
+      startFrame: File;
+      endFrame: File;
+    }
+  ) => void;
 }
 
 function download(filename: string, content: string, type: string) {
@@ -28,9 +48,59 @@ export default function ResultsSection({
   combinedPromptFooter,
   klingPrompt,
   isGeneratingKling,
-  onGenerateKling
+  onGenerateKling,
+  startFrameImage,
+  endFrameImage,
+  isGeneratingKlingVideo,
+  onGenerateKlingVideo
 }: ResultsSectionProps) {
   const hasPrompts = prompts && prompts.length > 0;
+  // Local state for video generator
+  const [videoSceneInput, setVideoSceneInput] = useState("");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
+
+  const [localStartFrame, setLocalStartFrame] = useState<File | null>(null);
+  const [localStartPreview, setLocalStartPreview] = useState<string | null>(null);
+  const [localEndFrame, setLocalEndFrame] = useState<File | null>(null);
+  const [localEndPreview, setLocalEndPreview] = useState<string | null>(null);
+  // New fields state
+  const [negativePrompt, setNegativePrompt] = useState("");
+  const [cfgScale, setCfgScale] = useState("0.5");
+  const [mode, setMode] = useState("std");
+  const [duration, setDuration] = useState("5");
+  const [version, setVersion] = useState("1.6");
+
+  // Initialize video scene input when prompts change
+  useEffect(() => {
+    // If we have a kling prompt, prioritize that!
+    if (klingPrompt) {
+      setVideoSceneInput(klingPrompt);
+    } else if (prompts && prompts.length > 0) {
+      const combined = prompts.join("\n\n") + (combinedPromptFooter ? `\n\n${combinedPromptFooter}` : "");
+      setVideoSceneInput(combined);
+    }
+  }, [prompts, combinedPromptFooter, klingPrompt]);
+
+  // NO PROP SYNCING for frames - User wants to upload NEW images explicitly.
+  // We strictly start empty unless user uploads.
+  useEffect(() => {
+    // Cleanup function
+    return () => {
+      // Cleanup if needed
+    };
+  }, []);
+
+  // Handle local uploads
+  const handleStartFrameSelect = (f: File) => {
+    setLocalStartFrame(f);
+    setLocalStartPreview(URL.createObjectURL(f));
+  };
+
+  const handleEndFrameSelect = (f: File) => {
+    setLocalEndFrame(f);
+    setLocalEndPreview(URL.createObjectURL(f));
+  };
+
 
   const handleDownloadText = () => {
     if (!hasPrompts) return;
@@ -120,6 +190,213 @@ export default function ResultsSection({
                     </div>
                   </div>
                 )}
+
+                {onGenerateKlingVideo && (
+                  <div className="pt-4 border-t border-dashed border-border mt-4">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                          <Video className="w-4 h-4 text-orange-500" />
+                          Kling Video Generator
+                        </h3>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Scene Input</label>
+                          <textarea
+                            className="w-full min-h-[100px] p-3 rounded-md border border-input bg-background text-sm"
+                            value={videoSceneInput}
+                            onChange={(e) => setVideoSceneInput(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Frame Uploaders */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-medium">Start Frame</label>
+                              {localStartFrame && (
+                                <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive" onClick={() => {
+                                  setLocalStartFrame(null);
+                                  setLocalStartPreview(null);
+                                }}>Clear</Button>
+                              )}
+                            </div>
+                            {!localStartFrame ? (
+                              <UploadZone onFileSelected={handleStartFrameSelect} />
+                            ) : (
+                              <ImagePreview src={localStartPreview!} onChangeImage={() => {
+                                setLocalStartFrame(null);
+                                setLocalStartPreview(null);
+                              }} />
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-medium">End Frame</label>
+                              {localEndFrame && (
+                                <Button variant="ghost" size="sm" className="h-6 text-xs text-destructive" onClick={() => {
+                                  setLocalEndFrame(null);
+                                  setLocalEndPreview(null);
+                                }}>Clear</Button>
+                              )}
+                            </div>
+                            {!localEndFrame ? (
+                              <UploadZone onFileSelected={handleEndFrameSelect} />
+                            ) : (
+                              <ImagePreview src={localEndPreview!} onChangeImage={() => {
+                                setLocalEndFrame(null);
+                                setLocalEndPreview(null);
+                              }} />
+                            )}
+                            {!localEndFrame && (
+                              <div className="text-xs text-muted-foreground mt-1 text-center">
+                                (Optional) If empty, Start Frame will be used.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Aspect Ratio</label>
+                            <select
+                              className="w-full p-2 rounded-md border border-input bg-background text-sm"
+                              value={aspectRatio}
+                              onChange={(e) => setAspectRatio(e.target.value)}
+                            >
+                              <option value="16:9">16:9 (Landscape)</option>
+                              <option value="9:16">9:16 (Portrait)</option>
+                              <option value="1:1">1:1 (Square)</option>
+                            </select>
+                          </div>
+
+                          {/* New Advanced Fields */}
+                          <div className="space-y-4 pt-4 border-t border-dashed border-border">
+                            <h4 className="text-sm font-medium text-muted-foreground">Advanced Settings</h4>
+
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Negative Prompt</label>
+                              <textarea
+                                className="w-full min-h-[60px] p-2 rounded-md border border-input bg-background text-sm"
+                                value={negativePrompt}
+                                onChange={(e) => setNegativePrompt(e.target.value)}
+                                placeholder="low quality, blur, distortion..."
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium flex justify-between">
+                                  CFG Scale
+                                  <span className="text-muted-foreground">{cfgScale}</span>
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="1"
+                                  step="0.1"
+                                  className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-orange-600"
+                                  value={cfgScale}
+                                  onChange={(e) => setCfgScale(e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">Mode</label>
+                                <select
+                                  className="w-full p-2 rounded-md border border-input bg-background text-sm"
+                                  value={mode}
+                                  onChange={(e) => {
+                                    const newMode = e.target.value;
+                                    setMode(newMode);
+                                    // Reset version if needed, or keep 1.6 if available in both (it is)
+                                    setVersion("1.6");
+                                  }}
+                                >
+                                  <option value="std">Standard</option>
+                                  <option value="pro">Professional</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">Duration</label>
+                                <select
+                                  className="w-full p-2 rounded-md border border-input bg-background text-sm"
+                                  value={duration}
+                                  onChange={(e) => setDuration(e.target.value)}
+                                >
+                                  <option value="5">5 Seconds</option>
+                                  <option value="10">10 Seconds</option>
+                                </select>
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium">Version</label>
+                                <select
+                                  className="w-full p-2 rounded-md border border-input bg-background text-sm"
+                                  value={version}
+                                  onChange={(e) => setVersion(e.target.value)}
+                                >
+                                  {mode === "std" ? (
+                                    <>
+                                      <option value="1.0">1.0</option>
+                                      <option value="1.5">1.5</option>
+                                      <option value="1.6">1.6</option>
+                                      <option value="2.1">2.1</option>
+                                      <option value="2.1-master">2.1-master</option>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <option value="1.0">1.0</option>
+                                      <option value="1.5">1.5</option>
+                                      <option value="1.6">1.6</option>
+                                      <option value="2.0">2.0</option>
+                                      <option value="2.1">2.1</option>
+                                      <option value="2.1-master">2.1-master</option>
+                                    </>
+                                  )}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={() => {
+                            if (localStartFrame) {
+                              const end = localEndFrame || localStartFrame;
+                              onGenerateKlingVideo({
+                                prompt: videoSceneInput,
+                                negativePrompt,
+                                cfgScale,
+                                mode,
+                                duration,
+                                version,
+                                aspectRatio,
+                                startFrame: localStartFrame,
+                                endFrame: end
+                              });
+                            }
+                          }}
+                          disabled={isGeneratingKlingVideo || !videoSceneInput.trim() || !localStartFrame}
+                          className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isGeneratingKlingVideo ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating Video Request...
+                            </>
+                          ) : (
+                            "Generate Kling Video JSON"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -128,3 +405,4 @@ export default function ResultsSection({
     </section>
   );
 }
+
