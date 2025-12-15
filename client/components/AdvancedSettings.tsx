@@ -33,6 +33,7 @@ const ETHNICITIES = [
     // "Belgian",
     // "Brazilian",
     // "British",
+    // "Britsh",
     // "Bulgarian",
     // "Cambodian",
     // "Canadian",

@@ -11,6 +11,7 @@ import Generator from "./pages/Generator";
 import SceneToPrompt from "./pages/SceneToPrompt";
 import SceneTextToPrompt from "./pages/SceneTextToPrompt";
 import BrollToPrompt from "./pages/BrollToPrompt";
+import BrollToPrompt2 from "./pages/BrollToPrompt2";
 import FakeAvatarGenerator from "./pages/FakeAvatarGenerator";
 import NotFound from "./pages/NotFound";
 import HowItWorks from "./pages/HowItWorks";
@@ -19,6 +20,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Support from "./pages/Support";
 import History from "./pages/History";
+import FaceAnalyzer from "./pages/FaceAnalyzer";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
@@ -39,6 +41,7 @@ const App = () => (
               <Route path="/scene-to-prompt" element={<SceneToPrompt />} />
               <Route path="/scene-text-to-prompt" element={<SceneTextToPrompt />} />
               <Route path="/broll-to-prompt" element={<BrollToPrompt />} />
+              <Route path="/broll-to-prompt-2" element={<BrollToPrompt2 />} />
               <Route path="/fake-avatar-generator" element={<FakeAvatarGenerator />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/about" element={<About />} />
@@ -46,6 +49,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/support" element={<Support />} />
               <Route path="/history" element={<History />} />
+              <Route path="/face-analyzer" element={<FaceAnalyzer />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

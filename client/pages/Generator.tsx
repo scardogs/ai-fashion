@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import UploadZone from "@/components/UploadZone";
 import ImagePreview from "@/components/ImagePreview";
 import ResultsSection from "@/components/ResultsSection";
@@ -19,6 +27,7 @@ export default function Generator() {
   const [error, setError] = useState<string | null>(null);
 
   // Advanced Settings State
+  const [mode, setMode] = useState("");
   const [ethnicity, setEthnicity] = useState("");
   const [gender, setGender] = useState("");
   const [skinColor, setSkinColor] = useState("");
@@ -89,6 +98,7 @@ export default function Generator() {
       const compressed = await compressImage(file);
       const out = await handleImageSubmission(compressed, {
         signal: controller.signal,
+        mode,
         ethnicity,
         gender,
         skinColor,
@@ -156,7 +166,20 @@ export default function Generator() {
         </div>
 
         <div className="space-y-6">
-          {/* <AdvancedSettings
+          <div className="space-y-2">
+            <Label htmlFor="mode">Mode</Label>
+            <Select value={mode} onValueChange={setMode}>
+              <SelectTrigger id="mode">
+                <SelectValue placeholder="Select Mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="editorial-portrait">Editorial Portrait</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <AdvancedSettings
             ethnicity={ethnicity}
             setEthnicity={setEthnicity}
             gender={gender}
@@ -189,7 +212,7 @@ export default function Generator() {
             setAngle={setAngle}
             pose={pose}
             setPose={setPose}
-          /> */}
+          />
 
           <ResultsSection prompts={prompts} />
 

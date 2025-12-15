@@ -9,6 +9,7 @@ interface ResultsSectionProps {
   prompts: string[] | null;
   labels?: string[];
   combinedPromptFooter?: string;
+  isFetchingFaceProfile?: boolean; // New prop
   // Kling Generator Props
   klingPrompt?: string | null;
   isGeneratingKling?: boolean;
@@ -46,6 +47,7 @@ export default function ResultsSection({
   prompts,
   labels,
   combinedPromptFooter,
+  isFetchingFaceProfile,
   klingPrompt,
   isGeneratingKling,
   onGenerateKling,
@@ -54,7 +56,9 @@ export default function ResultsSection({
   isGeneratingKlingVideo,
   onGenerateKlingVideo
 }: ResultsSectionProps) {
-  const hasPrompts = prompts && prompts.length > 0;
+  const hasPrompts = (prompts && prompts.length > 0);
+  const showSection = hasPrompts || isFetchingFaceProfile;
+
   // Local state for video generator
   const [videoSceneInput, setVideoSceneInput] = useState("");
   const [aspectRatio, setAspectRatio] = useState("16:9");
@@ -122,7 +126,7 @@ export default function ResultsSection({
 
   const getTitle = (i: number) => {
     if (labels && labels[i]) return labels[i];
-    return prompts!.length > 1 ? `Variation ${i + 1}` : "Generated Prompt";
+    return (prompts && prompts.length > 1) ? `Variation ${i + 1}` : "Generated Prompt";
   };
 
   const combinedPromptContent = prompts
@@ -131,25 +135,45 @@ export default function ResultsSection({
 
   return (
     <section className="space-y-4">
-      {hasPrompts && (
+      {showSection && (
         <>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-foreground">
-              Your Fashion Photography Prompt{prompts.length > 1 ? 's' : ''}
+              Your Fashion Photography Prompt{prompts && prompts.length > 1 ? 's' : ''}
             </h2>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleDownloadText}>
+              <Button variant="outline" onClick={handleDownloadText} disabled={!hasPrompts}>
                 Download as Text
               </Button>
-              <Button onClick={handleDownloadJson}>Download Prompt</Button>
+              <Button onClick={handleDownloadJson} disabled={!hasPrompts}>Download Prompt</Button>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4">
-            {prompts.map((p, i) => (
-              <PromptCard key={i} title={getTitle(i)} prompt={p} />
-            ))}
 
-            {prompts.length > 1 && (
+            {/* If we are fetching face profile and have no prompts yet, show a loading card */}
+            {isFetchingFaceProfile && !hasPrompts && (
+              <PromptCard title="Face Analysis Prompt" prompt="" isLoading={true} />
+            )}
+
+            {hasPrompts && prompts!.map((p, i) => {
+              // Hide empty prompts unless it's the first one loading
+              if (!p && !(i === 0 && isFetchingFaceProfile)) return null;
+
+              return (
+                <PromptCard
+                  key={i}
+                  title={getTitle(i)}
+                  prompt={p}
+                  // If it's the first prompt (Face Analysis) and we are currently re-fetching it, show loading
+                  // Actually the requirement is "show face analysis text after prompt generation it should show after i select a client add a loading"
+                  // If we already have prompts, and we select a client, we are re-fetching.
+                  // We typically update the first prompt. So if isFetchingFaceProfile is true, the first card should be loading.
+                  isLoading={isFetchingFaceProfile && i === 0}
+                />
+              );
+            })}
+
+            {hasPrompts && prompts!.filter(p => p && p.trim() !== "").length > 1 && (
               <>
                 <PromptCard
                   key="combined"

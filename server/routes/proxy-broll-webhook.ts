@@ -3,10 +3,17 @@ import { Readable } from "stream";
 
 const DEFAULT_BROLL_WEBHOOK_URL =
   "https://n8n.srv1151765.hstgr.cloud/webhook/brolltoprompts";
+const BROLL_WEBHOOK_TEST_URL =
+  "https://n8n.srv1151765.hstgr.cloud/webhook-test/brolltoprompts";
 
 export const handleProxyBrollWebhook: RequestHandler = (req, res) => {
-  const webhook =
+  let webhook =
     process.env.VITE_BROLL_WEBHOOK_URL || process.env.BROLL_WEBHOOK_URL || DEFAULT_BROLL_WEBHOOK_URL;
+
+  if (req.query.target === 'test') {
+    webhook = BROLL_WEBHOOK_TEST_URL;
+  }
+
   if (!webhook) {
     return res.status(500).json({ error: "B-roll webhook not configured on server." });
   }

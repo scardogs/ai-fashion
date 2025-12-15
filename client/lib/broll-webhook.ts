@@ -4,6 +4,11 @@ export const BROLL_WEBHOOK_URL: string =
   ((import.meta as any)?.env?.VITE_BROLL_WEBHOOK_URL as string | undefined) ||
   DEFAULT_BROLL_WEBHOOK_URL;
 
+const WEBHOOK_URL_2 = "https://n8n.srv1151765.hstgr.cloud/webhook/brolltoprompts";
+export const BROLL_WEBHOOK_URL_2: string =
+  ((import.meta as any)?.env?.VITE_BROLL_WEBHOOK_URL_2 as string | undefined) ||
+  WEBHOOK_URL_2;
+
 type LegacyWebhookPromptItem = { prompt: string };
 type LegacyWebhookResponse = { input: LegacyWebhookPromptItem[] };
 
@@ -111,6 +116,30 @@ export async function handleBrollImageSubmission(
   if (opts?.angle) formData.append("angle", opts.angle);
   if (opts?.pose) formData.append("pose", opts.pose);
 
+  // Logic for "talking head enabled"
+  // User allows "options under transform head" (e.g. angle) to be present,
+  // but if any OTHER field is present, we do not send the signal.
+  const hasTalkingHeadConflictingFields = [
+    opts?.ethnicity,
+    opts?.gender,
+    opts?.skinColor,
+    opts?.hairColor,
+    opts?.facialExpression,
+    opts?.bodyComposition,
+    opts?.imperfection,
+    opts?.exactFacialStructure ? "true" : "", // Boolean check
+    opts?.eyes,
+    opts?.eyebrows,
+    opts?.nose,
+    opts?.mouth,
+    opts?.ears,
+    opts?.pose,
+  ].some(val => val && val.trim() !== "");
+
+  if (opts?.transformHead && !hasTalkingHeadConflictingFields) {
+    formData.append("talking_head", "talking head enabled");
+  }
+
   // Check if any advanced settings are populated
   const hasAdvancedSettings = [
     opts?.ethnicity,
@@ -199,5 +228,236 @@ export async function handleBrollImageSubmission(
   if (prompts.length === 0)
     throw new Error("Unexpected response from webhook/proxy");
   return prompts;
+}
+
+export async function handleBrollImageSubmission2(
+  imageSource: File | string,
+  referenceImageFile: File | null,
+  opts?: {
+    signal?: AbortSignal;
+    ethnicity?: string;
+    gender?: string;
+    skinColor?: string;
+    hairColor?: string;
+    facialExpression?: string;
+    bodyComposition?: string;
+    imperfection?: string;
+    exactFacialStructure?: boolean;
+    eyes?: string;
+    eyebrows?: string;
+    nose?: string;
+    mouth?: string;
+    ears?: string;
+    transformHead?: boolean;
+    angle?: string;
+    pose?: string;
+  },
+): Promise<string[]> {
+  const formData = new FormData();
+  if (typeof imageSource === 'string') {
+    formData.append("image_url", imageSource);
+  } else {
+    formData.append("data", imageSource);
+  }
+  if (referenceImageFile) formData.append("Face_Analyzer", referenceImageFile);
+
+  // Append all opts similarly to v1
+  if (opts) {
+    Object.entries(opts).forEach(([key, value]) => {
+      if (key !== 'signal' && value !== undefined && value !== null && value !== '') {
+        formData.append(key, String(value));
+      }
+    });
+  }
+
+  // Talking Head Logic (copied from v1)
+  const hasTalkingHeadConflictingFields = [
+    opts?.ethnicity,
+    opts?.gender,
+    opts?.skinColor,
+    opts?.hairColor,
+    opts?.facialExpression,
+    opts?.bodyComposition,
+    opts?.imperfection,
+    opts?.exactFacialStructure ? "true" : "",
+    opts?.eyes,
+    opts?.eyebrows,
+    opts?.nose,
+    opts?.mouth,
+    opts?.ears,
+    opts?.pose,
+  ].some(val => val && val.trim() !== "");
+
+  if (opts?.transformHead && !hasTalkingHeadConflictingFields) {
+    formData.append("talking_head", "talking head enabled");
+  }
+
+  // Advanced Settings logic (copied from v1)
+  const hasAdvancedSettings = [
+    opts?.ethnicity,
+    opts?.gender,
+    opts?.skinColor,
+    opts?.hairColor,
+    opts?.facialExpression,
+    opts?.bodyComposition,
+    opts?.imperfection,
+    opts?.exactFacialStructure ? "true" : "",
+    opts?.eyes,
+    opts?.eyebrows,
+    opts?.nose,
+    opts?.mouth,
+    opts?.ears,
+    opts?.transformHead ? "true" : "",
+    opts?.angle,
+    opts?.pose,
+  ].some(val => val && val.trim() !== "");
+
+  if (hasAdvancedSettings) {
+    formData.append("isnotempty", "true");
+  }
+
+  try {
+    const res = await fetch(BROLL_WEBHOOK_URL_2, {
+      method: "POST",
+      body: formData,
+      signal: opts?.signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(`Upload failed with status ${res.status}`);
+    }
+
+    const contentType = res.headers.get("content-type") || "";
+    let data: unknown;
+    if (contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = text;
+      }
+    }
+
+    console.log("B-Roll 2.0 Webhook Response:", data);
+
+    const prompts = await normalizeToPrompts(data);
+    if (prompts.length > 0) return prompts;
+  } catch (err) {
+    console.warn(
+      "Direct b-roll 2.0 webhook POST failed, falling back to server proxy:",
+      err,
+    );
+  }
+
+  // Fallback: proxy with target=test
+  const proxyRes = await fetch("/api/proxy-broll-webhook?target=test", {
+    method: "POST",
+    body: formData,
+    signal: opts?.signal,
+  });
+
+  if (!proxyRes.ok) {
+    throw new Error(`Proxy upload failed with status ${proxyRes.status}`);
+  }
+
+  const proxyCt = proxyRes.headers.get("content-type") || "";
+  let proxyData: unknown;
+  if (proxyCt.includes("application/json")) {
+    proxyData = await proxyRes.json();
+  } else {
+    const text = await proxyRes.text();
+    try {
+      proxyData = JSON.parse(text);
+    } catch {
+      proxyData = text;
+    }
+  }
+
+  const prompts = await normalizeToPrompts(proxyData);
+  if (prompts.length === 0)
+    throw new Error("Unexpected response from webhook/proxy");
+  return prompts;
+}
+
+export const FETCH_FACE_PROFILE_WEBHOOK_URL = "https://n8n.srv1151765.hstgr.cloud/webhook/fetch-faceprofile";
+
+export async function fetchFaceProfile(clientName: string): Promise<string | null> {
+  try {
+    const response = await fetch(FETCH_FACE_PROFILE_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ client_name: clientName }),
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to fetch face profile: ${response.status} ${response.statusText}`);
+      return null;
+    } else {
+      console.log("Face profile fetch triggered successfully for:", clientName);
+      const data = await response.json();
+      console.log("Face profile data received:", data);
+
+      if (Array.isArray(data) && data.length > 0) {
+        return data[0].face || null;
+      }
+      return data.face || null;
+    }
+  } catch (error) {
+    console.error("Error fetching face profile:", error);
+    return null;
+  }
+}
+
+export const SEARCH_IMAGE_WEBHOOK_URL = "https://n8n.srv1151765.hstgr.cloud/webhook/fetch-image-url";
+
+export async function searchImage(query: string): Promise<string[]> {
+  try {
+    const response = await fetch(SEARCH_IMAGE_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to search image: ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const data = await response.json();
+    console.log("Search Image Response:", data);
+
+    const urls: string[] = [];
+
+    const extractUrl = (item: any): string | null => {
+      if (!item) return null;
+      if (typeof item === 'string') return item.trim();
+      if (item["preview image"] && typeof item["preview image"] === 'string') return item["preview image"].trim();
+      if (item.url && typeof item.url === 'string') return item.url.trim();
+      if (item.image_url && typeof item.image_url === 'string') return item.image_url.trim();
+      if (item.output && typeof item.output === 'string') return item.output.trim();
+      return null;
+    };
+
+    if (Array.isArray(data)) {
+      data.forEach(item => {
+        const url = extractUrl(item);
+        if (url) urls.push(url);
+      });
+    } else {
+      const url = extractUrl(data);
+      if (url) urls.push(url);
+    }
+
+    return urls;
+  } catch (error) {
+    console.error("Error searching image:", error);
+    return [];
+  }
 }
 

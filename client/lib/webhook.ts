@@ -37,6 +37,7 @@ export async function handleImageSubmission(
   imageFile: File,
   opts?: {
     signal?: AbortSignal;
+    mode?: string;
     ethnicity?: string;
     gender?: string;
     skinColor?: string;
@@ -59,6 +60,14 @@ export async function handleImageSubmission(
 
   const formData = new FormData();
   formData.append("Base_Image", imageFile);
+
+  // Handle mode specific payload
+  if (opts?.mode === 'editorial-portrait') {
+    formData.append("editorial", "enabled");
+  } else if (opts?.mode) {
+    formData.append("mode", opts.mode);
+  }
+
   if (opts?.ethnicity) formData.append("ethnicity", opts.ethnicity);
   if (opts?.gender) formData.append("gender", opts.gender);
   if (opts?.skinColor) formData.append("skinColor", opts.skinColor);
@@ -78,6 +87,7 @@ export async function handleImageSubmission(
 
   // Check if any advanced settings are populated
   const hasAdvancedSettings = [
+    opts?.mode,
     opts?.ethnicity,
     opts?.gender,
     opts?.skinColor,
