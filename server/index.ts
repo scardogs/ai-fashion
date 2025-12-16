@@ -6,6 +6,7 @@ import { handleProxyWebhook } from "./routes/proxy-webhook";
 import { handleProxySceneWebhook } from "./routes/proxy-scene-webhook";
 import { handleProxyBrollWebhook } from "./routes/proxy-broll-webhook";
 import { handleProxyGenerateImage } from "./routes/proxy-generate-image";
+import { uploadthingRouteHandler } from "./routes/uploadthing-handler";
 
 export function createServer() {
   const app = express();
@@ -27,6 +28,9 @@ export function createServer() {
   app.post("/api/proxy-scene-webhook", handleProxySceneWebhook);
   app.post("/api/proxy-broll-webhook", handleProxyBrollWebhook);
   app.post("/api/proxy-generate-image", handleProxyGenerateImage);
+
+  // UploadThing routes
+  app.use("/api/uploadthing", uploadthingRouteHandler);
 
   return app;
 }

@@ -12,6 +12,7 @@ import SceneToPrompt from "./pages/SceneToPrompt";
 import SceneTextToPrompt from "./pages/SceneTextToPrompt";
 import BrollToPrompt from "./pages/BrollToPrompt";
 import BrollToPrompt2 from "./pages/BrollToPrompt2";
+import BrollToPrompt3 from "./pages/BrollToPrompt3";
 import FakeAvatarGenerator from "./pages/FakeAvatarGenerator";
 import NotFound from "./pages/NotFound";
 import HowItWorks from "./pages/HowItWorks";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/scene-text-to-prompt" element={<SceneTextToPrompt />} />
               <Route path="/broll-to-prompt" element={<BrollToPrompt />} />
               <Route path="/broll-to-prompt-2" element={<BrollToPrompt2 />} />
+              <Route path="/broll-to-prompt-3" element={<BrollToPrompt3 />} />
               <Route path="/fake-avatar-generator" element={<FakeAvatarGenerator />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/about" element={<About />} />
