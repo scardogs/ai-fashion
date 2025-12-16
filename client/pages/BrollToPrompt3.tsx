@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useUploadThing } from "@/lib/uploadthing-config";
 import { sendToWebhook, normalizeWebhookResponse } from "@/lib/broll3-webhook";
 import { toast } from "sonner";
-import { Loader2, X, Upload as UploadIcon, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, X, Upload as UploadIcon, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { compressToSize } from "@/lib/image";
+import { BrollDataResponse, fetchBrollData } from "@/lib/broll3-data-webhook";
+import { BrollDataTable } from "@/components/BrollDataTable";
 
 interface FileWithPreview {
     file: File;
@@ -23,8 +26,35 @@ export default function BrollToPrompt3() {
     const [files, setFiles] = useState<FileWithPreview[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [webhookData, setWebhookData] = useState<BrollDataResponse[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(false);
+
+    // Track processed file IDs to prevent duplicate webhook calls
+    const processedIds = useRef<Set<string>>(new Set());
 
     const { startUpload } = useUploadThing("imageUploader");
+
+    const loadData = async () => {
+        try {
+            setIsLoadingData(true);
+            const data = await fetchBrollData();
+            if (Array.isArray(data)) {
+                setWebhookData(data);
+            } else if (data) {
+                setWebhookData([data]);
+            }
+        } catch (error) {
+            console.error("Failed to load data:", error);
+            toast.error("no data found to load analysis history");
+        } finally {
+            setIsLoadingData(false);
+        }
+    };
+
+    // Load data on mount
+    useEffect(() => {
+        loadData();
+    }, []);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -32,6 +62,9 @@ export default function BrollToPrompt3() {
             files.forEach((f) => URL.revokeObjectURL(f.preview));
         };
     }, []);
+
+    // Updated imports to include useRef
+
 
     const validateFile = (file: File): boolean => {
         if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -73,6 +106,7 @@ export default function BrollToPrompt3() {
             if (file) URL.revokeObjectURL(file.preview);
             return prev.filter((f) => f.id !== id);
         });
+        processedIds.current.delete(id);
     };
 
     const updateFileStatus = (
@@ -85,10 +119,19 @@ export default function BrollToPrompt3() {
     };
 
     const uploadFile = async (fileItem: FileWithPreview) => {
+        // Guard against duplicate processing
+        if (processedIds.current.has(fileItem.id)) {
+            return;
+        }
+        processedIds.current.add(fileItem.id);
+
         try {
             updateFileStatus(fileItem.id, { status: "uploading" });
 
-            const result = await startUpload([fileItem.file]);
+            // Compress image before uploading (target ~10KB, force WebP)
+            const compressed = await compressToSize(fileItem.file, 10, 5, true);
+
+            const result = await startUpload([compressed]);
 
             if (!result || !result[0]?.url) {
                 throw new Error("Upload failed - no URL returned");
@@ -108,6 +151,9 @@ export default function BrollToPrompt3() {
                 prompts: prompts.length > 0 ? prompts : ["No prompts generated"],
                 status: "complete",
             });
+
+            // Refresh data table
+            await loadData();
 
             toast.success(`${fileItem.file.name} processed successfully!`);
         } catch (err: any) {
@@ -143,6 +189,7 @@ export default function BrollToPrompt3() {
     const clearAll = () => {
         files.forEach((f) => URL.revokeObjectURL(f.preview));
         setFiles([]);
+        processedIds.current.clear();
     };
 
     const getStatusIcon = (status: FileWithPreview["status"]) => {
@@ -352,12 +399,28 @@ export default function BrollToPrompt3() {
                     </div>
                 )}
 
-                {/* Empty State */}
                 {files.length === 0 && (
                     <div className="text-center py-12 text-muted-foreground">
                         <p>No images selected. Drop files or click the upload zone above.</p>
                     </div>
                 )}
+            </div>
+
+            {/* Results Table */}
+            <div className="mt-10 space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold tracking-tight">Analysis Results</h2>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadData}
+                        disabled={isLoadingData}
+                    >
+                        <RefreshCw className={cn("mr-2 h-4 w-4", isLoadingData && "animate-spin")} />
+                        Refresh Data
+                    </Button>
+                </div>
+                <BrollDataTable data={webhookData} />
             </div>
         </div>
     );
