@@ -18,23 +18,85 @@ type VariationItem = {
 async function normalizeToPrompts(data: unknown): Promise<string[]> {
   if (!data) return [];
   if (Array.isArray(data)) {
-    return (data as any[])
-      .map((it) => it?.input?.prompt)
-      .filter((p): p is string => typeof p === "string");
+    // Separate face analysis from fashion prompts
+    let faceAnalysis: string | null = null;
+    const fashionPrompts: string[] = [];
+
+    // Iterate over the array and extract prompts
+    (data as any[]).forEach((item) => {
+      // Case 1: analysis_text field (Face Analysis)
+      if (item?.analysis_text && typeof item.analysis_text === 'string') {
+        faceAnalysis = item.analysis_text;
+        return;
+      }
+
+      // Case 2: Simple string
+      if (typeof item === 'string') {
+        fashionPrompts.push(item);
+        return;
+      }
+
+      // Case 3: Object with input.prompt (Standard structure - Fashion prompts)
+      if (item?.input?.prompt && typeof item.input.prompt === 'string') {
+        fashionPrompts.push(item.input.prompt);
+        return;
+      }
+
+      // Case 4: Object with 'content.parts[0].text' (Gemini structure)
+      if (item?.content?.parts && Array.isArray(item.content.parts) && item.content.parts.length > 0) {
+        if (item.content.parts[0]?.text && typeof item.content.parts[0].text === 'string') {
+          fashionPrompts.push(item.content.parts[0].text);
+          return;
+        }
+      }
+
+      // Case 5: Direct fields (prompt, text, output)
+      if (item?.prompt && typeof item.prompt === 'string') {
+        fashionPrompts.push(item.prompt);
+        return;
+      }
+      if (item?.text && typeof item.text === 'string') {
+        fashionPrompts.push(item.text);
+        return;
+      }
+      if (item?.output && typeof item.output === 'string') {
+        fashionPrompts.push(item.output);
+        return;
+      }
+    });
+
+    // Return face analysis first, then fashion prompts
+    const result: string[] = [];
+    if (faceAnalysis) result.push(faceAnalysis);
+    result.push(...fashionPrompts);
+    return result;
   }
   if (typeof data === "object") {
     const obj = data as any;
+    // Handle nested input array
     if (Array.isArray(obj.input)) {
       return obj.input
         .map((x: any) => x?.prompt)
         .filter((p: any): p is string => typeof p === "string");
     }
+    // Handle specific nested content like Gemini if returned as single object
+    if (obj.content?.parts && Array.isArray(obj.content.parts)) {
+      if (obj.content.parts[0]?.text && typeof obj.content.parts[0].text === 'string') {
+        return [obj.content.parts[0].text];
+      }
+    }
+
+    // Handle direct fields
+    const candidates = [obj.output, obj.text, obj.prompt, obj.result, obj.analysis_text];
+    const found = candidates.filter(c => typeof c === "string");
+    if (found.length > 0) return found;
   }
   return [];
 }
 
 export async function handleImageSubmission(
   imageFile: File,
+  referenceImageFile: File | null,
   opts?: {
     signal?: AbortSignal;
     mode?: string;
@@ -60,6 +122,7 @@ export async function handleImageSubmission(
 
   const formData = new FormData();
   formData.append("Base_Image", imageFile);
+  if (referenceImageFile) formData.append("Face_Analyzer", referenceImageFile);
 
   // Handle mode specific payload
   if (opts?.mode === 'editorial-portrait') {

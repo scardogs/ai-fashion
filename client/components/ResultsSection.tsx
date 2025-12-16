@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Sparkles, Video } from "lucide-react";
 import UploadZone from "@/components/UploadZone";
 import ImagePreview from "@/components/ImagePreview";
+import { toast } from "sonner";
 
 interface ResultsSectionProps {
   prompts: string[] | null;
@@ -59,6 +60,9 @@ export default function ResultsSection({
   const hasPrompts = (prompts && prompts.length > 0);
   const showSection = hasPrompts || isFetchingFaceProfile;
 
+  // Track which fashion prompt is selected for combining (default to first fashion prompt, index 1)
+  const [selectedFashionPromptIndex, setSelectedFashionPromptIndex] = useState<number>(1);
+
   // Local state for video generator
   const [videoSceneInput, setVideoSceneInput] = useState("");
   const [aspectRatio, setAspectRatio] = useState("16:9");
@@ -80,10 +84,17 @@ export default function ResultsSection({
     if (klingPrompt) {
       setVideoSceneInput(klingPrompt);
     } else if (prompts && prompts.length > 0) {
-      const combined = prompts.join("\n\n") + (combinedPromptFooter ? `\n\n${combinedPromptFooter}` : "");
+      const combined = getCombinedPromptContent();
       setVideoSceneInput(combined);
     }
-  }, [prompts, combinedPromptFooter, klingPrompt]);
+  }, [prompts, combinedPromptFooter, klingPrompt, selectedFashionPromptIndex]);
+
+  // Reset selected index when prompts change
+  useEffect(() => {
+    if (prompts && prompts.length > 1) {
+      setSelectedFashionPromptIndex(1); // Default to first fashion prompt
+    }
+  }, [prompts]);
 
   // NO PROP SYNCING for frames - User wants to upload NEW images explicitly.
   // We strictly start empty unless user uploads.
@@ -129,9 +140,23 @@ export default function ResultsSection({
     return (prompts && prompts.length > 1) ? `Variation ${i + 1}` : "Generated Prompt";
   };
 
-  const combinedPromptContent = prompts
-    ? prompts.join("\n\n") + (combinedPromptFooter ? `\n\n${combinedPromptFooter}` : "")
-    : "";
+  // Helper function to get combined prompt content
+  const getCombinedPromptContent = () => {
+    if (!prompts || prompts.length === 0) return "";
+
+    // If we have labels (meaning face analysis + fashion prompts)
+    if (labels && labels.length > 0 && prompts.length > 1) {
+      // Combine face analysis (index 0) with selected fashion prompt
+      const faceAnalysis = prompts[0] || "";
+      const selectedFashion = prompts[selectedFashionPromptIndex] || prompts[1] || "";
+      return faceAnalysis + "\n\n" + selectedFashion + (combinedPromptFooter ? `\n\n${combinedPromptFooter}` : "");
+    }
+
+    // Otherwise join all prompts
+    return prompts.join("\n\n") + (combinedPromptFooter ? `\n\n${combinedPromptFooter}` : "");
+  };
+
+  const combinedPromptContent = getCombinedPromptContent();
 
   return (
     <section className="space-y-4">
@@ -159,6 +184,10 @@ export default function ResultsSection({
               // Hide empty prompts unless it's the first one loading
               if (!p && !(i === 0 && isFetchingFaceProfile)) return null;
 
+              // Determine if this is a fashion prompt (not face analysis)
+              const isFaceAnalysis = labels && labels[0] && i === 0;
+              const isFashionPrompt = labels && labels.length > 0 && i > 0;
+
               return (
                 <PromptCard
                   key={i}
@@ -169,6 +198,11 @@ export default function ResultsSection({
                   // If we already have prompts, and we select a client, we are re-fetching.
                   // We typically update the first prompt. So if isFetchingFaceProfile is true, the first card should be loading.
                   isLoading={isFetchingFaceProfile && i === 0}
+                  showCombineButton={isFashionPrompt}
+                  onCombine={isFashionPrompt ? () => {
+                    setSelectedFashionPromptIndex(i);
+                    toast.success("Combined successfully");
+                  } : undefined}
                 />
               );
             })}

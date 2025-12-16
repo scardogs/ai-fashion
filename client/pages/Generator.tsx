@@ -21,6 +21,8 @@ import { Loader2, X } from "lucide-react";
 export default function Generator() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [refFile, setRefFile] = useState<File | null>(null);
+  const [refPreviewUrl, setRefPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState("Idle");
   const [prompts, setPrompts] = useState<string[] | null>(null);
@@ -53,8 +55,9 @@ export default function Generator() {
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (refPreviewUrl) URL.revokeObjectURL(refPreviewUrl);
     };
-  }, [previewUrl]);
+  }, [previewUrl, refPreviewUrl]);
 
   const onFileSelected = (f: File) => {
     setFile(f);
@@ -64,10 +67,20 @@ export default function Generator() {
     setPreviewUrl(url);
   };
 
+  const onRefFileSelected = (f: File) => {
+    setRefFile(f);
+    setError(null);
+    const url = URL.createObjectURL(f);
+    setRefPreviewUrl(url);
+  };
+
   const resetAll = () => {
     setFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
+    setRefFile(null);
+    if (refPreviewUrl) URL.revokeObjectURL(refPreviewUrl);
+    setRefPreviewUrl(null);
     setPrompts(null);
     setError(null);
     setStatus("Idle");
@@ -96,7 +109,7 @@ export default function Generator() {
     abortRef.current = controller;
     try {
       const compressed = await compressImage(file);
-      const out = await handleImageSubmission(compressed, {
+      const out = await handleImageSubmission(compressed, refFile, {
         signal: controller.signal,
         mode,
         ethnicity,
@@ -163,6 +176,22 @@ export default function Generator() {
           ) : (
             <ImagePreview src={previewUrl!} onChangeImage={resetAll} />
           )}
+
+          <div className="space-y-2">
+            <Label>Reference Face Analyzer (Optional)</Label>
+            {!refFile ? (
+              <UploadZone onFileSelected={onRefFileSelected} />
+            ) : (
+              <ImagePreview
+                src={refPreviewUrl!}
+                onChangeImage={() => {
+                  setRefFile(null);
+                  if (refPreviewUrl) URL.revokeObjectURL(refPreviewUrl);
+                  setRefPreviewUrl(null);
+                }}
+              />
+            )}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -214,7 +243,11 @@ export default function Generator() {
             setPose={setPose}
           />
 
-          <ResultsSection prompts={prompts} />
+          <ResultsSection
+            prompts={prompts}
+            labels={refFile ? ["Face Analysis Prompt", "Fashion Prompt"] : undefined}
+            combinedPromptFooter={refFile ? "using the exact facial structure, eyes, eyebrows, nose, mouth, ears, hair, skin tone, and details of the person in the reference image, without alteration or beautification." : undefined}
+          />
 
           {!prompts && (
             <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
