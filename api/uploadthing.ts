@@ -34,6 +34,6 @@ const handler = createRouteHandler({
 });
 
 // Mount handler
-app.use("/", handler);
+app.use("/api/uploadthing", handler);
 
 export default app;
