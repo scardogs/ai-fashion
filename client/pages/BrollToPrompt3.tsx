@@ -1,126 +1,182 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useUploadThing } from "@/lib/uploadthing-config";
 import { sendToWebhook, normalizeWebhookResponse } from "@/lib/broll3-webhook";
 import { toast } from "sonner";
-import { Loader2, Upload, X, Image as ImageIcon } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Loader2, X, Upload as UploadIcon, CheckCircle2, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface FileWithPreview {
+    file: File;
+    preview: string;
+    id: string;
+    status: "pending" | "uploading" | "processing" | "complete" | "error";
+    uploadedUrl?: string;
+    prompts?: string[];
+    error?: string;
+}
+
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function BrollToPrompt3() {
-    const [file, setFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [isSendingToWebhook, setIsSendingToWebhook] = useState(false);
-    const [prompts, setPrompts] = useState<string[] | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [files, setFiles] = useState<FileWithPreview[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
-    const { startUpload } = useUploadThing("imageUploader", {
-        onClientUploadComplete: (res) => {
-            console.log("Upload complete:", res);
-            if (res && res[0]?.url) {
-                setUploadedUrl(res[0].url);
-                toast.success("Image uploaded successfully!");
-                // Automatically send to webhook after upload
-                handleSendToWebhook(res[0].url);
+    const { startUpload } = useUploadThing("imageUploader");
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            files.forEach((f) => URL.revokeObjectURL(f.preview));
+        };
+    }, []);
+
+    const validateFile = (file: File): boolean => {
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+            toast.error(`${file.name}: Invalid file type. Use JPG, PNG, or WEBP`);
+            return false;
+        }
+        if (file.size > MAX_SIZE) {
+            toast.error(`${file.name}: File too large. Max 10MB`);
+            return false;
+        }
+        return true;
+    };
+
+    const handleFilesSelect = (selectedFiles: FileList | null) => {
+        if (!selectedFiles || selectedFiles.length === 0) return;
+
+        const validFiles: FileWithPreview[] = [];
+
+        Array.from(selectedFiles).forEach((file) => {
+            if (validateFile(file)) {
+                validFiles.push({
+                    file,
+                    preview: URL.createObjectURL(file),
+                    id: `${file.name}-${Date.now()}-${Math.random()}`,
+                    status: "pending",
+                });
             }
-        },
-        onUploadError: (error: Error) => {
-            console.error("Upload error:", error);
-            setError(error.message);
-            toast.error(`Upload failed: ${error.message}`);
-            setIsUploading(false);
-        },
-    });
+        });
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (!selectedFile) return;
+        if (validFiles.length > 0) {
+            setFiles((prev) => [...prev, ...validFiles]);
+            toast.success(`${validFiles.length} image(s) added`);
+        }
+    };
 
-        // Validate file type
-        if (!selectedFile.type.startsWith("image/")) {
-            toast.error("Please select an image file");
+    const removeFile = (id: string) => {
+        setFiles((prev) => {
+            const file = prev.find((f) => f.id === id);
+            if (file) URL.revokeObjectURL(file.preview);
+            return prev.filter((f) => f.id !== id);
+        });
+    };
+
+    const updateFileStatus = (
+        id: string,
+        updates: Partial<FileWithPreview>
+    ) => {
+        setFiles((prev) =>
+            prev.map((f) => (f.id === id ? { ...f, ...updates } : f))
+        );
+    };
+
+    const uploadFile = async (fileItem: FileWithPreview) => {
+        try {
+            updateFileStatus(fileItem.id, { status: "uploading" });
+
+            const result = await startUpload([fileItem.file]);
+
+            if (!result || !result[0]?.url) {
+                throw new Error("Upload failed - no URL returned");
+            }
+
+            const uploadedUrl = result[0].url;
+            updateFileStatus(fileItem.id, {
+                uploadedUrl,
+                status: "processing"
+            });
+
+            // Send to webhook
+            const response = await sendToWebhook(uploadedUrl);
+            const prompts = normalizeWebhookResponse(response);
+
+            updateFileStatus(fileItem.id, {
+                prompts: prompts.length > 0 ? prompts : ["No prompts generated"],
+                status: "complete",
+            });
+
+            toast.success(`${fileItem.file.name} processed successfully!`);
+        } catch (err: any) {
+            console.error(`Error processing ${fileItem.file.name}:`, err);
+            updateFileStatus(fileItem.id, {
+                status: "error",
+                error: err.message || "Upload failed",
+            });
+            toast.error(`${fileItem.file.name}: ${err.message || "Upload failed"}`);
+        }
+    };
+
+    const handleUploadAll = async () => {
+        const pendingFiles = files.filter((f) => f.status === "pending");
+
+        if (pendingFiles.length === 0) {
+            toast.error("No pending files to upload");
             return;
         }
 
-        // Validate file size (16MB max)
-        if (selectedFile.size > 16 * 1024 * 1024) {
-            toast.error("File size must be less than 16MB");
-            return;
+        setIsProcessing(true);
+        toast.info(`Uploading ${pendingFiles.length} image(s)...`);
+
+        // Upload files sequentially to avoid overwhelming the server
+        for (const fileItem of pendingFiles) {
+            await uploadFile(fileItem);
         }
 
-        setFile(selectedFile);
-        setError(null);
-        setPrompts(null);
-        setUploadedUrl(null);
-
-        // Create preview
-        const url = URL.createObjectURL(selectedFile);
-        setPreviewUrl(url);
+        setIsProcessing(false);
+        toast.success("All uploads complete!");
     };
 
-    const handleUpload = async () => {
-        if (!file) return;
-
-        setIsUploading(true);
-        setError(null);
-
-        try {
-            await startUpload([file]);
-        } catch (err: any) {
-            console.error("Upload error:", err);
-            setError(err.message || "Upload failed");
-            toast.error("Upload failed");
-            setIsUploading(false);
-        }
+    const clearAll = () => {
+        files.forEach((f) => URL.revokeObjectURL(f.preview));
+        setFiles([]);
     };
 
-    const handleSendToWebhook = async (url: string) => {
-        setIsSendingToWebhook(true);
-        setError(null);
-
-        try {
-            toast.info("Sending to webhook for processing...");
-            const response = await sendToWebhook(url);
-            const extractedPrompts = normalizeWebhookResponse(response);
-
-            if (extractedPrompts.length > 0) {
-                setPrompts(extractedPrompts);
-                toast.success("Prompts generated successfully!");
-            } else {
-                // Show raw response if no prompts extracted
-                setPrompts([JSON.stringify(response, null, 2)]);
-                toast.success("Webhook response received!");
-            }
-        } catch (err: any) {
-            console.error("Webhook error:", err);
-            setError(err.message || "Failed to process image");
-            toast.error("Failed to process image");
-        } finally {
-            setIsSendingToWebhook(false);
-            setIsUploading(false);
+    const getStatusIcon = (status: FileWithPreview["status"]) => {
+        switch (status) {
+            case "uploading":
+            case "processing":
+                return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+            case "complete":
+                return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+            case "error":
+                return <AlertCircle className="h-4 w-4 text-red-500" />;
+            default:
+                return null;
         }
     };
 
-    const handleReset = () => {
-        setFile(null);
-        if (previewUrl) {
-            URL.revokeObjectURL(previewUrl);
+    const getStatusText = (status: FileWithPreview["status"]) => {
+        switch (status) {
+            case "uploading":
+                return "Uploading...";
+            case "processing":
+                return "Processing...";
+            case "complete":
+                return "Complete";
+            case "error":
+                return "Failed";
+            default:
+                return "Pending";
         }
-        setPreviewUrl(null);
-        setUploadedUrl(null);
-        setPrompts(null);
-        setError(null);
     };
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        toast.success("Copied to clipboard!");
-    };
-
-    const isProcessing = isUploading || isSendingToWebhook;
+    const pendingCount = files.filter((f) => f.status === "pending").length;
+    const completeCount = files.filter((f) => f.status === "complete").length;
+    const errorCount = files.filter((f) => f.status === "error").length;
 
     return (
         <div className="container mx-auto py-10">
@@ -130,169 +186,178 @@ export default function BrollToPrompt3() {
                         Broll Scene Image to Prompt 3.0
                     </h1>
                     <p className="text-foreground/80 text-lg">
-                        Upload your b-roll scene images and generate professional prompts instantly
+                        Upload single or multiple b-roll images to generate professional prompts
                     </p>
                 </div>
             </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* Upload Section */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Upload Image</CardTitle>
-                            <CardDescription>
-                                Select an image file (JPG, PNG, WEBP) up to 16MB
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {!file ? (
-                                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-border rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors">
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <Upload className="w-12 h-12 mb-4 text-muted-foreground" />
-                                        <p className="mb-2 text-sm text-muted-foreground">
-                                            <span className="font-semibold">Click to upload</span> or drag and drop
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            PNG, JPG, WEBP (MAX. 16MB)
-                                        </p>
-                                    </div>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        accept="image/*"
-                                        onChange={handleFileSelect}
+            <div className="space-y-6">
+                {/* Upload Zone */}
+                <div
+                    className={cn(
+                        "relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 sm:p-12 text-center transition-colors cursor-pointer bg-white",
+                        isDragging
+                            ? "border-primary bg-accent/50"
+                            : "border-border hover:border-primary/60"
+                    )}
+                    onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        handleFilesSelect(e.dataTransfer.files);
+                    }}
+                    onClick={() => document.getElementById("file-input")?.click()}
+                >
+                    <div className="flex items-center justify-center rounded-full bg-primary/10 text-primary size-16">
+                        <UploadIcon className="size-7" />
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-base font-medium text-foreground">
+                            Drop your images here or click to browse
+                        </p>
+                        <p className="text-sm text-foreground/70">
+                            Supports JPG, PNG, WEBP • Max 10MB per file • Multiple files allowed
+                        </p>
+                    </div>
+                    <input
+                        id="file-input"
+                        type="file"
+                        accept={ACCEPTED_TYPES.join(",")}
+                        multiple
+                        className="sr-only"
+                        onChange={(e) => handleFilesSelect(e.target.files)}
+                    />
+                </div>
+
+                {/* Stats Bar */}
+                {files.length > 0 && (
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted">
+                        <div className="flex gap-4 text-sm">
+                            <span className="font-medium">{files.length} total</span>
+                            {pendingCount > 0 && (
+                                <span className="text-muted-foreground">{pendingCount} pending</span>
+                            )}
+                            {completeCount > 0 && (
+                                <span className="text-green-600">{completeCount} complete</span>
+                            )}
+                            {errorCount > 0 && (
+                                <span className="text-red-600">{errorCount} failed</span>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleUploadAll}
+                                disabled={isProcessing || pendingCount === 0}
+                                className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    `Upload ${pendingCount > 0 ? `${pendingCount} Image${pendingCount > 1 ? 's' : ''}` : 'All'}`
+                                )}
+                            </Button>
+                            <Button variant="outline" onClick={clearAll} disabled={isProcessing}>
+                                Clear All
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Files Grid */}
+                {files.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {files.map((fileItem) => (
+                            <div
+                                key={fileItem.id}
+                                className="rounded-xl border border-border bg-white overflow-hidden shadow-sm"
+                            >
+                                {/* Image Preview */}
+                                <div className="relative aspect-video bg-muted">
+                                    <img
+                                        src={fileItem.preview}
+                                        alt={fileItem.file.name}
+                                        className="w-full h-full object-cover"
                                     />
-                                </label>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="relative">
-                                        <img
-                                            src={previewUrl!}
-                                            alt="Preview"
-                                            className="w-full h-64 object-cover rounded-lg border border-border"
-                                        />
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2"
-                                            onClick={handleReset}
-                                            disabled={isProcessing}
+                                    {fileItem.status === "pending" && (
+                                        <button
+                                            onClick={() => removeFile(fileItem.id)}
+                                            className="absolute top-2 right-2 p-1 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
                                         >
                                             <X className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                                        </button>
+                                    )}
+                                </div>
 
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <ImageIcon className="h-4 w-4" />
-                                        <span className="truncate">{file.name}</span>
-                                        <span className="ml-auto">
-                                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                                {/* File Info */}
+                                <div className="p-3 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        {getStatusIcon(fileItem.status)}
+                                        <span className="text-xs font-medium truncate flex-1">
+                                            {fileItem.file.name}
                                         </span>
                                     </div>
 
-                                    <Button
-                                        onClick={handleUpload}
-                                        disabled={isProcessing || !!uploadedUrl}
-                                        className="w-full"
-                                    >
-                                        {isProcessing ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                {isSendingToWebhook ? "Processing..." : "Uploading..."}
-                                            </>
-                                        ) : uploadedUrl ? (
-                                            "✓ Uploaded & Processed"
-                                        ) : (
-                                            "Upload & Generate Prompt"
+                                    <div className="text-xs text-muted-foreground">
+                                        {getStatusText(fileItem.status)}
+                                        {fileItem.status === "complete" && fileItem.uploadedUrl && (
+                                            <span className="block truncate mt-1 text-green-600">
+                                                URL: {fileItem.uploadedUrl}
+                                            </span>
                                         )}
-                                    </Button>
+                                        {fileItem.status === "error" && fileItem.error && (
+                                            <span className="block mt-1 text-red-600">
+                                                Error: {fileItem.error}
+                                            </span>
+                                        )}
+                                    </div>
 
-                                    {error && (
-                                        <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-                                            {error}
+                                    {/* Prompts */}
+                                    {fileItem.prompts && fileItem.prompts.length > 0 && (
+                                        <div className="pt-2 border-t border-border space-y-2">
+                                            {fileItem.prompts.map((prompt, idx) => (
+                                                <div key={idx} className="space-y-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-medium">
+                                                            {fileItem.prompts!.length > 1 ? `Prompt ${idx + 1}` : "Prompt"}
+                                                        </span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-6 text-xs"
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(prompt);
+                                                                toast.success("Copied to clipboard!");
+                                                            }}
+                                                        >
+                                                            Copy
+                                                        </Button>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground line-clamp-3 bg-muted p-2 rounded">
+                                                        {prompt}
+                                                    </p>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
-                    {uploadedUrl && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm">Uploaded Image URL</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={uploadedUrl}
-                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => copyToClipboard(uploadedUrl)}
-                                    >
-                                        Copy
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
-
-                {/* Results Section */}
-                <div className="space-y-6">
-                    {prompts && prompts.length > 0 && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Generated Prompts</CardTitle>
-                                <CardDescription>
-                                    Copy and use these prompts for your projects
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {prompts.map((prompt, index) => (
-                                    <div key={index} className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <Label>
-                                                {prompts.length > 1 ? `Prompt ${index + 1}` : "Prompt"}
-                                            </Label>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => copyToClipboard(prompt)}
-                                            >
-                                                Copy
-                                            </Button>
-                                        </div>
-                                        <Textarea
-                                            value={prompt}
-                                            readOnly
-                                            className="min-h-[120px] font-mono text-sm"
-                                        />
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {!prompts && !file && (
-                        <Card className="border-dashed">
-                            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                                <ImageIcon className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                                <h3 className="font-semibold text-lg mb-2">No image uploaded</h3>
-                                <p className="text-sm text-muted-foreground max-w-sm">
-                                    Upload an image to get started. Your prompts will appear here once
-                                    processing is complete.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
+                {/* Empty State */}
+                {files.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <p>No images selected. Drop files or click the upload zone above.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
