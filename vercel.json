@@ -2,18 +2,15 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist/spa",
   "framework": "vite",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
   "rewrites": [
     {
-      "source": "/api/marketing-clients(.*)",
-      "destination": "/api/marketing-clients"
-    },
-    {
-      "source": "/api/broll-scene(.*)",
-      "destination": "/api/broll-scene"
-    },
-    {
       "source": "/api/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/$1"
     },
     {
       "source": "/(.*)",
