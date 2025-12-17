@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// This file handles /api/marketing-clients/[clientName]/face-profile
+// This file is at api/marketing-clients/[clientName]/face-profile.ts
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const { clientName } = req.query;
