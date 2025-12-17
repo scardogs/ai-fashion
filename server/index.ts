@@ -16,6 +16,7 @@ import { uploadthingRouteHandler } from "./routes/uploadthing-handler";
 import { connectDB } from "./db";
 import brollSceneRouter from "./routes/broll-scene";
 import marketingClientsRouter from "./routes/marketing-clients";
+import { createKlingTask, getKlingTask } from "./routes/piapi-kling";
 
 export function createServer() {
   const app = express();
@@ -46,7 +47,7 @@ export function createServer() {
   app.post("/api/proxy-generate-image", handleProxyGenerateImage);
 
   // PiAPI Kling Routes
-  const { createKlingTask, getKlingTask } = require("./routes/piapi-kling");
+  // const { createKlingTask, getKlingTask } = require("./routes/piapi-kling");
   app.post("/api/piapi/kling/task", createKlingTask);
   app.get("/api/piapi/kling/task/:taskId", getKlingTask);
   app.use("/api/uploadthing", uploadthingRouteHandler);

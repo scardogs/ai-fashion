@@ -5,15 +5,31 @@ const router = express.Router();
 
 // Get all marketing clients
 router.get('/', async (req, res) => {
+    console.log('[API] /marketing-clients hit');
     try {
+        const webhookUrl = 'https://n8n.srv1151765.hstgr.cloud/webhook/marketing-clients';
+        console.log(`[API] Fetching clients from: ${webhookUrl}`);
+
         // Fetch from n8n webhook as requested
-        const response = await fetch('https://n8n.srv1151765.hstgr.cloud/webhook/marketing-clients');
+        const response = await fetch(webhookUrl);
+        console.log(`[API] Webhook response status: ${response.status}`);
 
         if (!response.ok) {
+            const text = await response.text();
+            console.error(`[API] Webhook failed. Body: ${text}`);
             throw new Error(`Webhook returned status ${response.status}`);
         }
 
-        const clients = await response.json();
+        const text = await response.text();
+        // console.log(`[API] Raw response body: ${text.substring(0, 100)}...`);
+
+        let clients;
+        try {
+            clients = JSON.parse(text);
+        } catch (e) {
+            console.error(`[API] Failed to parse JSON: ${text}`);
+            throw new Error('Invalid JSON response from webhook');
+        }
 
         // Sort clients alphabetically by name for better UX
         if (Array.isArray(clients)) {
@@ -22,10 +38,11 @@ router.get('/', async (req, res) => {
             );
         }
 
+        console.log(`[API] Successfully retrieved ${Array.isArray(clients) ? clients.length : 0} clients`);
         res.json(clients);
     } catch (error: any) {
-        console.error('Error fetching marketing clients from webhook:', error);
-        res.status(500).json({ message: error.message });
+        console.error('[API] Error in /marketing-clients:', error);
+        res.status(500).json({ message: error.message, detail: String(error) });
     }
 });
 
