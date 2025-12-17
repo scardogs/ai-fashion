@@ -1,5 +1,5 @@
 
-import { Request, Response } from "express";
+import { Request, Response as ExpressResponse } from "express";
 
 const PI_API_KEY = process.env.PI_API_KEY;
 const PI_API_BASE_URL = "https://api.piapi.ai/api/v1";
@@ -18,19 +18,19 @@ function checkApiKey() {
  * POST /api/piapi/kling/task
  * Body: { prompt, negative_prompt, cfg_scale, duration, image_url, image_tail_url, mode, version }
  */
-export const createKlingTask = async (req: Request, res: Response) => {
+export const createKlingTask = async (req: Request, res: ExpressResponse) => {
     try {
         checkApiKey();
-        
-        const { 
-            prompt, 
-            negative_prompt, 
-            cfg_scale, 
-            duration, 
-            image_url, 
-            image_tail_url, 
-            mode, 
-            version 
+
+        const {
+            prompt,
+            negative_prompt,
+            cfg_scale,
+            duration,
+            image_url,
+            image_tail_url,
+            mode,
+            version
         } = req.body;
 
         if (!image_url) {
@@ -77,7 +77,7 @@ export const createKlingTask = async (req: Request, res: Response) => {
  * GET TASK STATUS
  * GET /api/piapi/kling/task/:taskId
  */
-export const getKlingTask = async (req: Request, res: Response) => {
+export const getKlingTask = async (req: Request, res: ExpressResponse) => {
     try {
         checkApiKey();
         const { taskId } = req.params;

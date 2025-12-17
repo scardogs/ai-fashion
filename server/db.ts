@@ -1,19 +1,47 @@
 import mongoose from 'mongoose';
 
-export async function connectDB() {
-    try {
-        const uri = process.env.MONGODB_URI;
-        if (!uri) {
-            throw new Error("MONGODB_URI is not defined in environment variables");
-        }
+const MONGODB_URI = process.env.MONGODB_URI;
 
-        // Connect to 'Snaply' database explicitly to fix missing DB name in .env
-        await mongoose.connect(uri, { dbName: 'Snaply' });
-        console.log("MongoDB connected successfully to 'Snaply' database");
-    } catch (error) {
-        console.error("MongoDB connection error:", error);
-        // Don't exit process in dev, just log
+if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable inside .env');
+}
+
+/**
+ * Global is used here to maintain a cached connection across hot reloads
+ * in development. This prevents connections growing exponentially
+ * during API Route usage.
+ */
+let cached = (global as any).mongoose;
+
+if (!cached) {
+    cached = (global as any).mongoose = { conn: null, promise: null };
+}
+
+export async function connectDB() {
+    if (cached.conn) {
+        return cached.conn;
     }
+
+    if (!cached.promise) {
+        const opts = {
+            dbName: 'Snaply',
+            bufferCommands: false,
+        };
+
+        cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+            console.log("MongoDB connected successfully to 'Snaply' database");
+            return mongoose;
+        });
+    }
+
+    try {
+        cached.conn = await cached.promise;
+    } catch (e) {
+        cached.promise = null;
+        throw e;
+    }
+
+    return cached.conn;
 }
 
 export const connectToDatabase = connectDB;
